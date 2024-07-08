@@ -1,0 +1,14 @@
+CREATE EXTENSION IF NOT EXISTS CITEXT;
+SET TIMEZONE = 'Asia/Hong_Kong';
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    email CITEXT NOT NULL UNIQUE,
+    password BYTEA NOT NULL,
+    activated BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+    updated_at timestamptz NOT NULL DEFAULT NOW(),
+    version INTEGER NOT NULL DEFAULT 1
+);
+
