@@ -13,11 +13,10 @@ var (
 	ErrUnauthorized = fmt.Errorf("unauthorized access")
 )
 
-func NewService(m *UserModel, mb *common.MessageBroker, t *TokenModel) *UserService {
+func NewService(m *DBModel, mb *common.MessageBroker) *UserService {
 	return &UserService{
 		m:  m,
 		mb: mb,
-		t:  t,
 	}
 }
 
@@ -39,24 +38,32 @@ func (s *UserService) CreateUser(ctx context.Context, u User) error {
 	}
 
 	// Insert the user into the database
-	err = s.m.insert(ctx, &u)
+	err = s.m.insertUser(ctx, &u)
 	if err != nil {
 		return err
 	}
 
 	// create the token
-	token, err := s.t.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
+	token, err := s.m.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
 	if err != nil {
 		return err
 	}
 
-	plainToken, err := json.Marshal(token.Plain)
+	data := struct {
+		Email string
+		Token string
+	}{
+		Email: u.Email,
+		Token: token.Plain,
+	}
+
+	emailData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
 	// Publish the user created event
-	err = s.mb.Publish(ctx, plainToken, common.UserCreatedKey, common.UserExchange)
+	err = s.mb.Publish(ctx, emailData, common.UserCreatedKey, common.UserExchange)
 	if err != nil {
 		return err
 	}
@@ -76,7 +83,7 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	// Hash the token
 	hash := hashToken(token)
 
-	user, err := s.t.getUser(ctx, TokenScopeActivate, hash)
+	user, err := s.m.getUser(ctx, TokenScopeActivate, hash)
 	if err != nil {
 		return err
 	}
@@ -87,16 +94,23 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	}
 
 	// activate the user account
-	err = s.m.activate(tx, ctx, user.ID, user.Version)
+	err = s.m.activateUserAccount(tx, ctx, user.ID, user.Version)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
 	}
 
 	// delete the token
-	err = s.t.delete(tx, ctx, user.ID, TokenScopeActivate)
+	err = s.m.deleteToken(tx, ctx, user.ID, TokenScopeActivate)
 	if err != nil {
 		_ = tx.Rollback()
+		return err
+	}
+
+	// add the blog:write permission
+	err = s.m.addUserPermission(tx, ctx, user.ID, PermissionWriteBlog)
+	if err != nil {
+		_ = tx.Rollback
 		return err
 	}
 
@@ -108,7 +122,7 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 }
 
 // LoginUser logs in a user and returns the access token and refresh token.
-func (s *UserService) LoginUser(ctx context.Context, username, password string, ip string, userAgent string) (*AuthToken, error) {
+func (s *UserService) LoginUser(ctx context.Context, username, password string) (*AuthToken, error) {
 	// Validate the username
 	v := common.NewValidator()
 	validateUsername(v, username)
@@ -118,7 +132,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string, 
 	}
 
 	// Get the user from the database
-	user, err := s.m.getByUsername(ctx, username)
+	user, err := s.m.getUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -137,13 +151,13 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string, 
 			return nil, err
 		}
 
-		if err := s.m.updatePassword(ctx, user.Password, user.ID, user.Version); err != nil {
+		if err := s.m.updateUserPassword(ctx, user.Password, user.ID, user.Version); err != nil {
 			return nil, err
 		}
 	}
 
 	// get the token from the database
-	dbToken, err := s.t.getAuthToken(ctx, user.ID)
+	dbToken, err := s.m.getAuthToken(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,13 +173,13 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string, 
 			}
 
 			// delete the token
-			err = s.t.deleteAuthToken(tx, ctx, user.ID)
+			err = s.m.deleteAuthToken(tx, ctx, user.ID)
 			if err != nil {
 				_ = tx.Rollback()
 				return nil, err
 			}
 
-			authToken, err := s.t.createAuthToken(tx, ctx, user.ID, ip, userAgent)
+			authToken, err := s.m.createAuthToken(tx, ctx, user.ID)
 			if err != nil {
 				_ = tx.Rollback()
 				return nil, err
@@ -184,7 +198,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string, 
 		return nil, err
 	}
 
-	authToken, err := s.t.createAuthToken(tx, ctx, user.ID, ip, userAgent)
+	authToken, err := s.m.createAuthToken(tx, ctx, user.ID)
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err

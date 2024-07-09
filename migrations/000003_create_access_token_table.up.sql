@@ -5,7 +5,5 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
     created_at timestamptz NOT NULL DEFAULT now(),
     access_token_expiry timestamptz NOT NULL,
     refresh_token_expiry timestamptz NOT NULL,
-    ip_address INET NOT NULL,
-    user_agent TEXT NOT NULL,
-    PRIMARY KEY (hash, user_id)
+    PRIMARY KEY (access_token, user_id)
 );

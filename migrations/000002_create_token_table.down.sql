@@ -1,0 +1,3 @@
+DROP TABLE IF NOT EXISTS tokens;
+
+DROP TABLE IF NOT EXISTS token_scopes;

@@ -18,7 +18,7 @@ type MessageProducer interface {
 }
 
 type MessageConsumer interface {
-	Consume(ctx context.Context, key BindingKey, exchange Exchange) (<-chan amqp.Delivery, error)
+	Consume(key BindingKey, exchange Exchange, queue Queue) (<-chan amqp.Delivery, error)
 }
 
 const (
@@ -103,4 +103,13 @@ func (mb *MessageBroker) Publish(ctx context.Context, msg []byte, key BindingKey
 	}
 
 	return nil
+}
+
+func (mb *MessageBroker) Consume(key BindingKey, exchange Exchange, queue Queue) (<-chan amqp.Delivery, error) {
+	msgs, err := mb.ch.Consume(string(queue), string(key), false, false, false, false, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not consume message: %w", err)
+	}
+
+	return msgs, nil
 }

@@ -27,8 +27,7 @@ func testUser() User {
 
 func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, error) {
 	db := common.TestDB(t)
-	m := NewUserModel(db)
-	tokenModel := NewTokenModel(db)
+	m := NewModel(db)
 	connURL := common.TestRabbitMQ(t)
 	mb, err := common.NewMessageBroker(connURL)
 	if err != nil {
@@ -41,7 +40,17 @@ func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, er
 	}
 
 	cleanup := func() error {
-		_, err := db.Exec("DELETE FROM tokens")
+		_, err := db.Exec("DELETE FROM user_permissions")
+		if err != nil {
+			return err
+		}
+
+		_, err = db.Exec("DELETE FROM auth_tokens")
+		if err != nil {
+			return err
+		}
+
+		_, err = db.Exec("DELETE FROM tokens")
 		if err != nil {
 			return err
 		}
@@ -54,7 +63,7 @@ func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, er
 		return nil
 	}
 
-	return NewService(m, mb, tokenModel), db, cleanup, nil
+	return NewService(m, mb), db, cleanup, nil
 }
 
 func TestSignUpUser(t *testing.T) {
@@ -148,12 +157,12 @@ func TestActivateUser(t *testing.T) {
 			return nil, err
 		}
 
-		err = s.m.insert(ctx, &u)
+		err = s.m.insertUser(ctx, &u)
 		if err != nil {
 			return nil, err
 		}
 
-		token, err := s.t.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
+		token, err := s.m.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
 		if err != nil {
 			return nil, err
 		}
@@ -213,12 +222,114 @@ func TestActivateUser(t *testing.T) {
 				err = db.QueryRow("SELECT COUNT(*) FROM users WHERE activated = true").Scan(&count)
 				assert.NoError(t, err)
 				assert.Equal(t, 1, count)
+
+				err = db.QueryRow("SELECT COUNT(*) FROM user_permissions").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 1, count)
+
 			} else {
 				err = db.QueryRow("SELECT COUNT(*) FROM tokens").Scan(&count)
 				assert.NoError(t, err)
 				assert.Equal(t, 0, count)
 
 				err = db.QueryRow("SELECT COUNT(*) FROM users WHERE activated = true").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, count)
+
+				err = db.QueryRow("SELECT COUNT(*) FROM user_permissions").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, count)
+			}
+
+			t.Cleanup(func() {
+				err := cleanup()
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestLoginUser(t *testing.T) {
+	s, db, cleanup, err := setupTestEnvironment(t)
+	assert.NoError(t, err)
+
+	setup := func(ctx context.Context, s *UserService, u User) error {
+		err := u.Password.set(u.Password.Plain)
+		if err != nil {
+			return err
+		}
+
+		err = s.m.insertUser(ctx, &u)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	testCases := []struct {
+		name        string
+		setup       func(context.Context, *UserService, User) error
+		user        User
+		expectedErr error
+	}{
+		{
+			name:        "valid user",
+			setup:       setup,
+			user:        testUser(),
+			expectedErr: nil,
+		},
+		{
+			name:  "invalid user",
+			setup: setup,
+			user: User{
+				Username: "invaliduser",
+				Password: Password{
+					Plain: "InvalidPassword123!",
+				},
+			},
+			expectedErr: ErrNotFound,
+		},
+		{
+			name: "second-time login",
+			setup: func(ctx context.Context, s *UserService, u User) error {
+				err := setup(ctx, s, u)
+				if err != nil {
+					return err
+				}
+
+				_, err = s.LoginUser(ctx, u.Username, u.Password.Plain)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			user:        testUser(),
+			expectedErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			if tc.setup != nil {
+				err := tc.setup(ctx, s, testUser())
+				assert.NoError(t, err)
+			}
+
+			_, err := s.LoginUser(ctx, tc.user.Username, tc.user.Password.Plain)
+			assert.Equal(t, tc.expectedErr, err)
+
+			var count int
+
+			if err == nil {
+				err = db.QueryRow("SELECT COUNT(*) FROM auth_tokens").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 1, count)
+			} else {
+				err = db.QueryRow("SELECT COUNT(*) FROM auth_tokens").Scan(&count)
 				assert.NoError(t, err)
 				assert.Equal(t, 0, count)
 			}

@@ -12,11 +12,11 @@ var (
 	ErrNotFound          = errors.New("user not found")
 )
 
-func NewUserModel(db *sql.DB) *UserModel {
-	return &UserModel{db: db}
+func NewModel(db *sql.DB) *DBModel {
+	return &DBModel{db: db}
 }
 
-func (m *UserModel) insert(ctx context.Context, u *User) error {
+func (m *DBModel) insertUser(ctx context.Context, u *User) error {
 	query := `
 		INSERT INTO users (username, email, password)
 		VALUES ($1, $2, $3)
@@ -70,7 +70,7 @@ func (m *UserModel) insert(ctx context.Context, u *User) error {
 // 	return &u, nil
 // }
 
-func (m *UserModel) getByUsername(ctx context.Context, username string) (*User, error) {
+func (m *DBModel) getUserByUsername(ctx context.Context, username string) (*User, error) {
 	query := `
 		SELECT id, username, email, password, version
 		FROM users
@@ -78,7 +78,7 @@ func (m *UserModel) getByUsername(ctx context.Context, username string) (*User, 
 
 	var u User
 
-	err := m.db.QueryRowContext(ctx, query, username).Scan(&u.ID, &u.Username, &u.Email, &u.Password, &u.Version)
+	err := m.db.QueryRowContext(ctx, query, username).Scan(&u.ID, &u.Username, &u.Email, &u.Password.hash, &u.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -117,7 +117,7 @@ func (m *UserModel) getByUsername(ctx context.Context, username string) (*User, 
 // 	return nil
 // }
 
-func (m *UserModel) activate(tx *sql.Tx, ctx context.Context, id int, version int) error {
+func (m *DBModel) activateUserAccount(tx *sql.Tx, ctx context.Context, id int, version int) error {
 	query := `
 		UPDATE users
 		SET activated = true
@@ -144,7 +144,7 @@ func (m *UserModel) activate(tx *sql.Tx, ctx context.Context, id int, version in
 	return nil
 }
 
-func (m *UserModel) updatePassword(ctx context.Context, pwd Password, id int, version int) error {
+func (m *DBModel) updateUserPassword(ctx context.Context, pwd Password, id int, version int) error {
 	query := `
 		UPDATE users
 		SET password = $1
