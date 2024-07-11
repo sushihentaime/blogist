@@ -71,13 +71,13 @@ func (s *UserService) CreateUser(ctx context.Context, u User) error {
 	return nil
 }
 
-// ActivateUser activates a user account using the token and deletes the token from the database.
+// ActivateUser activates a user account using the token and deletes the token from the database and adds permission for the user to perform write operation.
 func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	// Validate the token
 	v := common.NewValidator()
 	validateToken(v, token)
 	if !v.Valid() {
-		return fmt.Errorf("validation error: %v", v.Errors)
+		return fmt.Errorf("validation error: %v", v.Error())
 	}
 
 	// Hash the token
@@ -128,7 +128,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	validateUsername(v, username)
 	validatePassword(v, password)
 	if !v.Valid() {
-		return nil, fmt.Errorf("validation error: %v", v.Errors)
+		return nil, fmt.Errorf("validation error: %v", v.Error())
 	}
 
 	// Get the user from the database

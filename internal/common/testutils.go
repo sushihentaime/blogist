@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"testing"
 	"time"
 
@@ -84,7 +83,6 @@ func TestDB(t *testing.T) *sql.DB {
 	t.Cleanup(func() {
 		m.Drop()
 		c.Terminate(ctx)
-		fmt.Println("cleaned up")
 	})
 
 	return db

@@ -27,3 +27,8 @@ func (v *Validator) Check(ok bool, field, message string) {
 func (v *Validator) CheckStringLength(s string, min, max int) bool {
 	return len(s) >= min && len(s) <= max
 }
+
+// Errors returns the map of errors.
+func (v *Validator) Error() map[string]string {
+	return v.Errors
+}

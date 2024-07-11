@@ -16,6 +16,7 @@ func NewMailService(mb common.MessageConsumer, dialer Mailer) *MailService {
 
 // Send function that consumes messages from the message broker and sends emails to the user. Currently this function runs forever and I want a way to stop it.
 // ! Add a logger.
+// how to perform a graceful shutdown.
 func (s *MailService) SendActivationEmail() {
 	msgs, err := s.mb.Consume(common.UserCreatedKey, common.UserExchange, common.UserCreatedQueue)
 	if err != nil {
