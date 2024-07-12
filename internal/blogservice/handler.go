@@ -2,13 +2,13 @@ package blogservice
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
 
 	"github.com/sushihentaime/blogist/internal/common"
 )
 
-func NewBlogService(m *BlogModel) *BlogService {
-	return &BlogService{m: m}
+func NewBlogService(db *sql.DB) *BlogService {
+	return &BlogService{m: newBlogModel(db)}
 }
 
 type CreateBlogRequest struct {
@@ -24,7 +24,7 @@ func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) er
 	validateContent(v, req.Content)
 	validateInt(v, req.UserID, "id")
 	if !v.Valid() {
-		return fmt.Errorf("validation failed: %s", v.Error())
+		return v.ValidationError()
 	}
 
 	return s.m.insert(ctx, req.Title, req.Content, req.UserID)
@@ -35,7 +35,7 @@ func (s *BlogService) GetBlogByID(ctx context.Context, id int) (*Blog, error) {
 	v := common.NewValidator()
 	validateInt(v, id, "id")
 	if !v.Valid() {
-		return nil, fmt.Errorf("validation failed: %s", v.Error())
+		return nil, v.ValidationError()
 	}
 
 	return s.m.getBlogById(ctx, id)
@@ -49,7 +49,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, blog *Blog) error {
 	validateInt(v, blog.ID, "id")
 	validateInt(v, blog.UserID, "id")
 	if !v.Valid() {
-		return fmt.Errorf("validation failed: %s", v.Error())
+		return v.ValidationError()
 	}
 
 	return s.m.updateBlog(ctx, blog)
@@ -61,7 +61,7 @@ func (s *BlogService) DeleteBlog(ctx context.Context, blogId, userId int) error 
 	validateInt(v, blogId, "id")
 	validateInt(v, userId, "id")
 	if !v.Valid() {
-		return fmt.Errorf("validation failed: %s", v.Error())
+		return v.ValidationError()
 	}
 
 	return s.m.deleteBlog(ctx, blogId, userId)
@@ -72,30 +72,30 @@ func (s *BlogService) GetBlogsByUserId(ctx context.Context, userID int) (*[]Blog
 	v := common.NewValidator()
 	validateInt(v, userID, "id")
 	if !v.Valid() {
-		return nil, fmt.Errorf("validation failed: %s", v.Error())
+		return nil, v.ValidationError()
 	}
 
 	return s.m.getBlogsByUserId(ctx, userID)
 }
 
 // GetBlogs returns all blog posts. Default limit is 10 and default offset is 0.
-func (s *BlogService) GetBlogs(ctx context.Context, limit, offset int) ([]Blog, error) {
-	if limit < 1 {
-		limit = 10
+func (s *BlogService) GetBlogs(ctx context.Context, limit, offset *int) ([]Blog, error) {
+	if *limit < 1 {
+		*limit = 10
 	}
 
-	if offset < 0 {
-		offset = 0
+	if *offset < 0 {
+		*offset = 0
 	}
 
-	return s.m.getBlogs(ctx, limit, offset)
+	return s.m.getBlogs(ctx, *limit, *offset)
 }
 
 func (s *BlogService) GetBlogsByTitle(ctx context.Context, title string, limit, offset int) ([]Blog, error) {
 	v := common.NewValidator()
 	validateTitle(v, title)
 	if !v.Valid() {
-		return nil, fmt.Errorf("validation failed: %s", v.Error())
+		return nil, v.ValidationError()
 	}
 
 	if limit < 1 {

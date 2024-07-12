@@ -11,9 +11,10 @@ import (
 
 var (
 	ErrRecordNotFound = errors.New("record not found")
+	ErrUserForeignKey = errors.New("user_id does not exist")
 )
 
-func NewBlogModel(db *sql.DB) *BlogModel {
+func newBlogModel(db *sql.DB) *BlogModel {
 	return &BlogModel{db: db}
 }
 
@@ -38,7 +39,7 @@ func (m *BlogModel) insert(ctx context.Context, title, content string, id int) e
 	if err != nil {
 		switch {
 		case ForeignKeyError(err, "blogs_user_id_fkey"):
-			return fmt.Errorf("user with ID %d does not exist", id)
+			return ErrUserForeignKey
 		default:
 			return err
 		}

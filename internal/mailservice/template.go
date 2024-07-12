@@ -10,6 +10,10 @@ import (
 //go:embed templates/*
 var templateFS embed.FS
 
+func NewTemplate() *Template {
+	return &Template{}
+}
+
 // ParseTemplate function that parses the email template. The data parameter should be a struct that contains the data to be used in the template.
 func (tp *Template) ParseTemplate(name string, data any) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 	t, err := template.New("email").ParseFS(templateFS, "templates/"+name)

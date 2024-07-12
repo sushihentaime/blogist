@@ -27,7 +27,6 @@ func testUser() User {
 
 func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, error) {
 	db := common.TestDB(t)
-	m := NewModel(db)
 	connURL := common.TestRabbitMQ(t)
 	mb, err := common.NewMessageBroker(connURL)
 	if err != nil {
@@ -63,7 +62,7 @@ func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, er
 		return nil
 	}
 
-	return NewService(m, mb), db, cleanup, nil
+	return NewUserService(db, mb), db, cleanup, nil
 }
 
 func TestSignUpUser(t *testing.T) {
@@ -86,7 +85,7 @@ func TestSignUpUser(t *testing.T) {
 				Email:    testUser().Email,
 				Password: testUser().Password,
 			},
-			expectedErr: fmt.Errorf("validation error: map[username:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"username": "must be provided"}},
 		},
 		{
 			name: "empty email",
@@ -94,7 +93,7 @@ func TestSignUpUser(t *testing.T) {
 				Username: testUser().Username,
 				Password: testUser().Password,
 			},
-			expectedErr: fmt.Errorf("validation error: map[email:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"email": "must be provided"}},
 		},
 		{
 			name: "empty password",
@@ -102,12 +101,12 @@ func TestSignUpUser(t *testing.T) {
 				Username: testUser().Username,
 				Email:    testUser().Email,
 			},
-			expectedErr: fmt.Errorf("validation error: map[password:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"password": "must be provided"}},
 		},
 		{
 			name:        "empty payload",
 			payload:     User{},
-			expectedErr: fmt.Errorf("validation error: map[email:must be provided password:must be provided username:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"username": "must be provided", "email": "must be provided", "password": "must be provided"}},
 		},
 	}
 
@@ -118,7 +117,7 @@ func TestSignUpUser(t *testing.T) {
 
 			fmt.Printf("username: %s\n", tc.payload.Username)
 
-			err := s.CreateUser(ctx, tc.payload)
+			err := s.CreateUser(ctx, tc.payload.Username, tc.payload.Email, tc.payload.Password.Plain)
 			assert.Equal(t, tc.expectedErr, err)
 
 			var count int
@@ -185,14 +184,14 @@ func TestActivateUser(t *testing.T) {
 			token: func(ctx context.Context, s *UserService, u User) (*string, error) {
 				return strptr("invalid token"), nil
 			},
-			expectedErr: fmt.Errorf("validation error: map[token:invalid token]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"token": "invalid token"}},
 		},
 		{
 			name: "empty token",
 			token: func(ctx context.Context, s *UserService, u User) (*string, error) {
 				return strptr(""), nil
 			},
-			expectedErr: fmt.Errorf("validation error: map[token:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"token": "must be provided"}},
 		},
 	}
 

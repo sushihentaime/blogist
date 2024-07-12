@@ -37,7 +37,6 @@ func setupTestUser(db *sql.DB) (*int, error) {
 
 func setupTestEnvironment(t *testing.T) (*BlogService, *sql.DB, func() error, *int, error) {
 	db := common.TestDB(t)
-	m := NewBlogModel(db)
 
 	// set the password
 	randomBytes := make([]byte, 16)
@@ -60,7 +59,7 @@ func setupTestEnvironment(t *testing.T) (*BlogService, *sql.DB, func() error, *i
 		return nil
 	}
 
-	return NewBlogService(m), db, cleanup, id, nil
+	return NewBlogService(db), db, cleanup, id, nil
 }
 
 func createRandomBlog(db *sql.DB, userId int) (*int, *int, error) {

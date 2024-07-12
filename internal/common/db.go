@@ -3,11 +3,17 @@ package common
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
-// ConnectDB connects to the database and returns the connection
-func ConnectDB(URI string, maxOpenConns int, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
+func NewDB(host, port, user, password, name string, maxOpenConns, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
+	URI := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
+	return connectDB(URI, maxOpenConns, maxIdleConns, maxIdleTime)
+}
+
+// connectDB connects to the database and returns the connection
+func connectDB(URI string, maxOpenConns int, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
 	db, err := sql.Open("postgres", URI)
 	if err != nil {
 		return nil, err

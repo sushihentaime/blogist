@@ -2,7 +2,9 @@ package userservice
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,25 +12,31 @@ import (
 )
 
 var (
-	ErrUnauthorized = fmt.Errorf("unauthorized access")
+	ErrAuthenticationFailure = fmt.Errorf("unauthorized access")
 )
 
-func NewService(m *DBModel, mb *common.MessageBroker) *UserService {
+func NewUserService(db *sql.DB, mb *common.MessageBroker) *UserService {
 	return &UserService{
-		m:  m,
+		m:  newUserModel(db),
 		mb: mb,
 	}
 }
 
 // CreateUser creates a new user account and publish an user.created event.
-func (s *UserService) CreateUser(ctx context.Context, u User) error {
+func (s *UserService) CreateUser(ctx context.Context, username, email, password string) error {
 	// Perform validation
 	v := common.NewValidator()
-	validateUsername(v, u.Username)
-	validateEmail(v, u.Email)
-	validatePassword(v, u.Password.Plain)
+	validateUsername(v, username)
+	validateEmail(v, email)
+	validatePassword(v, password)
 	if !v.Valid() {
-		return fmt.Errorf("validation error: %v", v.Errors)
+		return v.ValidationError()
+	}
+
+	u := User{
+		Username: username,
+		Email:    email,
+		Password: Password{Plain: password},
 	}
 
 	// Set the password hash
@@ -77,7 +85,7 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	v := common.NewValidator()
 	validateToken(v, token)
 	if !v.Valid() {
-		return fmt.Errorf("validation error: %v", v.Error())
+		return v.ValidationError()
 	}
 
 	// Hash the token
@@ -128,13 +136,18 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	validateUsername(v, username)
 	validatePassword(v, password)
 	if !v.Valid() {
-		return nil, fmt.Errorf("validation error: %v", v.Error())
+		return nil, v.ValidationError()
 	}
 
 	// Get the user from the database
 	user, err := s.m.getUserByUsername(ctx, username)
 	if err != nil {
-		return nil, err
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return nil, ErrAuthenticationFailure
+		default:
+			return nil, err
+		}
 	}
 
 	// Compare the password hash
@@ -144,7 +157,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	}
 
 	if !ok {
-		return nil, ErrUnauthorized
+		return nil, ErrAuthenticationFailure
 	} else {
 		// rehash the password and update the user
 		if err := user.Password.set(password); err != nil {

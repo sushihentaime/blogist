@@ -1,5 +1,15 @@
 package common
 
+import "fmt"
+
+type ValidationError struct {
+	Errors map[string]string
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("validation errors: %+v", e.Errors)
+}
+
 type Validator struct {
 	Errors map[string]string
 }
@@ -28,7 +38,6 @@ func (v *Validator) CheckStringLength(s string, min, max int) bool {
 	return len(s) >= min && len(s) <= max
 }
 
-// Errors returns the map of errors.
-func (v *Validator) Error() map[string]string {
-	return v.Errors
+func (v *Validator) ValidationError() error {
+	return ValidationError{Errors: v.Errors}
 }

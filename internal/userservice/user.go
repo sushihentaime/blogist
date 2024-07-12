@@ -12,7 +12,7 @@ var (
 	ErrNotFound          = errors.New("user not found")
 )
 
-func NewModel(db *sql.DB) *DBModel {
+func newUserModel(db *sql.DB) *DBModel {
 	return &DBModel{db: db}
 }
 

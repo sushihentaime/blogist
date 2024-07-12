@@ -3,14 +3,16 @@ package mailservice
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/sushihentaime/blogist/internal/common"
 )
 
-func NewMailService(mb common.MessageConsumer, dialer Mailer) *MailService {
+func NewMailService(mb common.MessageConsumer, host, username, password, sender string, port int, logger *slog.Logger) *MailService {
 	return &MailService{
 		mb: mb,
-		m:  dialer,
+		m:  NewMailer(host, port, username, password, sender, NewTemplate()),
+		l:  logger,
 	}
 }
 
@@ -36,7 +38,7 @@ func (s *MailService) SendActivationEmail() {
 
 			err := json.Unmarshal(msg.Body, &data)
 			if err != nil {
-				fmt.Printf("could not unmarshal message: %v\n", err)
+				s.l.Error(fmt.Sprintf("could not unmarshal message: %v", err))
 				continue
 			}
 
@@ -52,10 +54,11 @@ func (s *MailService) SendActivationEmail() {
 
 			err = s.m.send(data.Email, activationLink, "activation_email.html")
 			if err != nil {
-				fmt.Printf("could not send activation email: %v\n", err)
+				s.l.Error(fmt.Sprintf("could not send activation email: %v", err))
+				continue
 			}
 
-			fmt.Printf("activation email sent to %s\n", data.Email)
+			s.l.Info(fmt.Sprintf("activation email sent to %s", data.Email))
 		}
 	}()
 
