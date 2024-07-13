@@ -296,3 +296,64 @@ func (app *application) getAllBlogsHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 }
+
+func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Request) {
+	title, err := app.readStringParam(r, "title")
+	if err != nil {
+		app.badRequestErrorResponse(w, r, err)
+		return
+	}
+
+	// get the limit and offset query parameters
+	limit, offset, err := app.readLimitOffsetParams(r)
+	if err != nil {
+		app.badRequestErrorResponse(w, r, err)
+		return
+	}
+
+	blogs, err := app.blogService.GetBlogsByTitle(r.Context(), title, limit, offset)
+	if err != nil {
+		switch {
+		case errors.As(err, &common.ValidationError{}):
+			validationErr := err.(common.ValidationError)
+			app.failedValidationErrorResponse(w, r, validationErr.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"blogs": blogs}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+func (app *application) getBlogsByUserIdHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := app.readIDParam(r, "id")
+	if err != nil {
+		app.badRequestErrorResponse(w, r, err)
+		return
+	}
+
+	blogs, err := app.blogService.GetBlogsByUserId(r.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, blogservice.ErrRecordNotFound):
+			app.notFoundErrorResponse(w, r)
+		case errors.As(err, &common.ValidationError{}):
+			validationErr := err.(common.ValidationError)
+			app.failedValidationErrorResponse(w, r, validationErr.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"blogs": blogs}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}

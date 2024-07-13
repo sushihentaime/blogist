@@ -475,7 +475,7 @@ func TestGetBlogs(t *testing.T) {
 			err := tc.setup()
 			assert.NoError(t, err)
 
-			_, err = s.GetBlogs(ctx, tc.limit, tc.offset)
+			_, err = s.GetBlogs(ctx, &tc.limit, &tc.offset)
 			assert.Equal(t, tc.expectedErr, err)
 
 			if err == nil {
@@ -540,7 +540,7 @@ func TestGetBlogsByTitle(t *testing.T) {
 			err := tc.setup()
 			assert.NoError(t, err)
 
-			_, err = s.GetBlogsByTitle(ctx, tc.title, tc.limit, tc.offset)
+			_, err = s.GetBlogsByTitle(ctx, tc.title, &tc.limit, &tc.offset)
 			assert.Equal(t, tc.expectedErr, err)
 
 			t.Cleanup(func() {

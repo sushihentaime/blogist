@@ -120,3 +120,14 @@ func (app *application) readLimitOffsetParams(r *http.Request) (*int, *int, erro
 
 	return limit, offset, nil
 }
+
+func (app *application) readStringParam(r *http.Request, key string) (string, error) {
+	params := httprouter.ParamsFromContext(r.Context())
+
+	value := params.ByName(key)
+	if value == "" {
+		return "", errors.New("invalid string parameter")
+	}
+
+	return value, nil
+}

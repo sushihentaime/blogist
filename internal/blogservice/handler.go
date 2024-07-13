@@ -91,20 +91,20 @@ func (s *BlogService) GetBlogs(ctx context.Context, limit, offset *int) ([]Blog,
 	return s.m.getBlogs(ctx, *limit, *offset)
 }
 
-func (s *BlogService) GetBlogsByTitle(ctx context.Context, title string, limit, offset int) ([]Blog, error) {
+func (s *BlogService) GetBlogsByTitle(ctx context.Context, title string, limit, offset *int) ([]Blog, error) {
 	v := common.NewValidator()
 	validateTitle(v, title)
 	if !v.Valid() {
 		return nil, v.ValidationError()
 	}
 
-	if limit < 1 {
-		limit = 10
+	if *limit < 1 {
+		*limit = 10
 	}
 
-	if offset < 0 {
-		offset = 0
+	if *offset < 0 {
+		*offset = 0
 	}
 
-	return s.m.getBlogsByTitle(ctx, title, limit, offset)
+	return s.m.getBlogsByTitle(ctx, title, *limit, *offset)
 }

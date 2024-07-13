@@ -210,5 +210,9 @@ func (m *BlogModel) getBlogsByTitle(ctx context.Context, title string, limit, of
 		blogs = append(blogs, blog)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return blogs, nil
 }

@@ -49,3 +49,7 @@ func (app *application) invalidCredentialsErrorResponse(w http.ResponseWriter, r
 func (app *application) unAuthorizedErrorResponse(w http.ResponseWriter, r *http.Request) {
 	app.writeErrorResponse(w, r, http.StatusUnauthorized, "unauthorized access")
 }
+
+func (app *application) methodNotAllowedErrorResponse(w http.ResponseWriter, r *http.Request) {
+	app.writeErrorResponse(w, r, http.StatusMethodNotAllowed, "method not allowed")
+}
