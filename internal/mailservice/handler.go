@@ -10,19 +10,18 @@ import (
 
 func NewMailService(mb common.MessageConsumer, host, username, password, sender string, port int, logger *slog.Logger) *MailService {
 	return &MailService{
-		mb: mb,
-		m:  NewMailer(host, port, username, password, sender, NewTemplate()),
-		l:  logger,
+		mb:     mb,
+		m:      NewMailer(host, port, username, password, sender, NewTemplate()),
+		logger: logger,
 	}
 }
 
 // Send function that consumes messages from the message broker and sends emails to the user. Currently this function runs forever and I want a way to stop it.
-// ! Add a logger.
-// how to perform a graceful shutdown.
+// ! Add a logger.Debug call to log the message received from the message broker.
 func (s *MailService) SendActivationEmail() {
 	msgs, err := s.mb.Consume(common.UserCreatedKey, common.UserExchange, common.UserCreatedQueue)
 	if err != nil {
-		fmt.Printf("could not consume messages: %v\n", err)
+		s.logger.Error("could not consume message", slog.String("error", err.Error()))
 		return
 	}
 
@@ -30,7 +29,6 @@ func (s *MailService) SendActivationEmail() {
 
 	go func() {
 		for msg := range msgs {
-			fmt.Printf("received message: %s\n", msg.Body)
 			var data struct {
 				Email string
 				Token string
@@ -38,7 +36,7 @@ func (s *MailService) SendActivationEmail() {
 
 			err := json.Unmarshal(msg.Body, &data)
 			if err != nil {
-				s.l.Error(fmt.Sprintf("could not unmarshal message: %v", err))
+				s.logger.Error("could not unmarshal message", slog.String("error", err.Error()))
 				continue
 			}
 
@@ -54,11 +52,13 @@ func (s *MailService) SendActivationEmail() {
 
 			err = s.m.send(data.Email, activationLink, "activation_email.html")
 			if err != nil {
-				s.l.Error(fmt.Sprintf("could not send activation email: %v", err))
+				s.logger.Error("could not send activation email", slog.String("error", err.Error()))
 				continue
 			}
 
-			s.l.Info(fmt.Sprintf("activation email sent to %s", data.Email))
+			s.logger.Info("activation email sent", slog.String("email", data.Email))
+
+			msg.Ack(false)
 		}
 	}()
 

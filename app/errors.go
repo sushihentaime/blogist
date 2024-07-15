@@ -53,3 +53,9 @@ func (app *application) unAuthorizedErrorResponse(w http.ResponseWriter, r *http
 func (app *application) methodNotAllowedErrorResponse(w http.ResponseWriter, r *http.Request) {
 	app.writeErrorResponse(w, r, http.StatusMethodNotAllowed, "method not allowed")
 }
+
+func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	message := "invalid or missing authentication token"
+	app.writeErrorResponse(w, r, http.StatusForbidden, message)
+}

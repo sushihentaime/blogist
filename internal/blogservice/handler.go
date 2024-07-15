@@ -22,7 +22,7 @@ func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) er
 	v := common.NewValidator()
 	validateTitle(v, req.Title)
 	validateContent(v, req.Content)
-	validateInt(v, req.UserID, "id")
+	validateInt(v, req.UserID, "user_id")
 	if !v.Valid() {
 		return v.ValidationError()
 	}
@@ -47,7 +47,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, blog *Blog) error {
 	validateTitle(v, blog.Title)
 	validateContent(v, blog.Content)
 	validateInt(v, blog.ID, "id")
-	validateInt(v, blog.UserID, "id")
+	validateInt(v, blog.UserID, "user_id")
 	if !v.Valid() {
 		return v.ValidationError()
 	}
@@ -59,7 +59,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, blog *Blog) error {
 func (s *BlogService) DeleteBlog(ctx context.Context, blogId, userId int) error {
 	v := common.NewValidator()
 	validateInt(v, blogId, "id")
-	validateInt(v, userId, "id")
+	validateInt(v, userId, "user_id")
 	if !v.Valid() {
 		return v.ValidationError()
 	}
@@ -70,7 +70,7 @@ func (s *BlogService) DeleteBlog(ctx context.Context, blogId, userId int) error 
 // GetBlogsByUserId returns all blog posts by a user.
 func (s *BlogService) GetBlogsByUserId(ctx context.Context, userID int) (*[]Blog, error) {
 	v := common.NewValidator()
-	validateInt(v, userID, "id")
+	validateInt(v, userID, "user_id")
 	if !v.Valid() {
 		return nil, v.ValidationError()
 	}

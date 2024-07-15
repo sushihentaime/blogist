@@ -21,5 +21,6 @@ func validateContent(v *common.Validator, content string) {
 }
 
 func validateInt(v *common.Validator, num int, name string) {
+	v.Check(num != 0, name, "must be provided")
 	v.Check(num > 0, name, "must be greater than zero")
 }

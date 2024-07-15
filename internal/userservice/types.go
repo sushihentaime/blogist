@@ -22,6 +22,10 @@ const (
 	PermissionWriteBlog Permission = "blog:write"
 )
 
+var (
+	AnonymousUser = User{}
+)
+
 type UserService struct {
 	m  *DBModel
 	mb common.MessageProducer
@@ -40,6 +44,8 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Version   int       `json:"version"`
+
+	Permissions Permissions `json:"permissions"`
 }
 
 type Password struct {

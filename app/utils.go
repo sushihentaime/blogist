@@ -131,3 +131,12 @@ func (app *application) readStringParam(r *http.Request, key string) (string, er
 
 	return value, nil
 }
+
+func (app *application) extractTokenFromHeader(authHeader string) string {
+	parts := strings.Split(authHeader, " ")
+	if len(parts) == 2 && parts[0] == "Bearer" {
+		return parts[1]
+	}
+
+	return ""
+}

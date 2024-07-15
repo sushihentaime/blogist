@@ -33,7 +33,11 @@ func validatePassword(v *common.Validator, password string) {
 	v.Check(value, "password", "must be between 8 and 72 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one symbol")
 }
 
-func validateToken(v *common.Validator, token string) {
+func ValidateToken(v *common.Validator, token string) {
 	v.Check(token != "", "token", "must be provided")
 	v.Check(len(token) == 26, "token", "invalid token")
+}
+
+func validateInt(v *common.Validator, num int, name string) {
+	v.Check(num > 0, name, "must be greater than zero")
 }

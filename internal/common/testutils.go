@@ -38,8 +38,9 @@ func TestRabbitMQ(t *testing.T) string {
 	return connURL
 }
 
-func dbMigrate(dsn string) (*migrate.Migrate, error) {
-	m, err := migrate.New("file://../../migrations", dsn)
+// file parameter changes according to the caller filelocation relative to the migrations file and it should be in the format of "file://../../migrations"
+func dbMigrate(file, dsn string) (*migrate.Migrate, error) {
+	m, err := migrate.New(file, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func dbMigrate(dsn string) (*migrate.Migrate, error) {
 	return m, nil
 }
 
-func TestDB(t *testing.T) *sql.DB {
+func TestDB(filepath string, t *testing.T) *sql.DB {
 	ctx := context.Background()
 
 	c, err := postgres.Run(ctx,
@@ -70,7 +71,7 @@ func TestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to get connection string: %s", err)
 	}
 
-	m, err := dbMigrate(connURL)
+	m, err := dbMigrate(filepath, connURL)
 	if err != nil {
 		t.Fatalf("could not run migrations: %v", err)
 	}

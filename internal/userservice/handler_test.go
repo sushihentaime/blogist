@@ -26,7 +26,7 @@ func testUser() User {
 }
 
 func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, error) {
-	db := common.TestDB(t)
+	db := common.TestDB("file://../../migrations", t)
 	connURL := common.TestRabbitMQ(t)
 	mb, err := common.NewMessageBroker(connURL)
 	if err != nil {
@@ -287,7 +287,7 @@ func TestLoginUser(t *testing.T) {
 					Plain: "InvalidPassword123!",
 				},
 			},
-			expectedErr: ErrNotFound,
+			expectedErr: ErrAuthenticationFailure,
 		},
 		{
 			name: "second-time login",
@@ -331,6 +331,179 @@ func TestLoginUser(t *testing.T) {
 				err = db.QueryRow("SELECT COUNT(*) FROM auth_tokens").Scan(&count)
 				assert.NoError(t, err)
 				assert.Equal(t, 0, count)
+			}
+
+			t.Cleanup(func() {
+				err := cleanup()
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestGetUserByAccessToken(t *testing.T) {
+	s, db, cleanup, err := setupTestEnvironment(t)
+	assert.NoError(t, err)
+
+	setup := func(ctx context.Context, s *UserService, u User) (*string, error) {
+		err := u.Password.set(u.Password.Plain)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.m.insertUser(ctx, &u)
+		if err != nil {
+			return nil, err
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			return nil, err
+		}
+
+		token, err := s.m.createAuthToken(tx, ctx, u.ID)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		// add permissions
+		err = s.m.addUserPermission(tx, ctx, u.ID, PermissionWriteBlog)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+
+		return &token.AccessTokenPlain, nil
+	}
+
+	testCases := []struct {
+		name        string
+		token       func(context.Context, *UserService, User) (*string, error)
+		expectedErr error
+	}{
+		{
+			name:        "valid token",
+			token:       setup,
+			expectedErr: nil,
+		},
+		{
+			name: "invalid token",
+			token: func(ctx context.Context, s *UserService, u User) (*string, error) {
+				return strptr("invalid token"), nil
+			},
+			expectedErr: common.ValidationError{Errors: map[string]string{"token": "invalid token"}},
+		},
+		{
+			name: "empty token",
+			token: func(ctx context.Context, s *UserService, u User) (*string, error) {
+				return strptr(""), nil
+			},
+			expectedErr: common.ValidationError{Errors: map[string]string{"token": "must be provided"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			var plainToken string
+
+			if tc.token != nil {
+				token, err := tc.token(ctx, s, testUser())
+				assert.NoError(t, err)
+				assert.NotNil(t, token)
+				plainToken = *token
+			}
+
+			_, err := s.GetUserByAccessToken(ctx, plainToken)
+			assert.Equal(t, tc.expectedErr, err)
+
+			t.Cleanup(func() {
+				err := cleanup()
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestLogoutUser(t *testing.T) {
+	s, db, cleanup, err := setupTestEnvironment(t)
+	assert.NoError(t, err)
+
+	setup := func(ctx context.Context, s *UserService, u User) error {
+		err := u.Password.set(u.Password.Plain)
+		if err != nil {
+			return err
+		}
+
+		err = s.m.insertUser(ctx, &u)
+		if err != nil {
+			return err
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			return err
+		}
+
+		_, err = s.m.createAuthToken(tx, ctx, u.ID)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	testCases := []struct {
+		name        string
+		setup       func(context.Context, *UserService, User) error
+		expectedErr error
+	}{
+		{
+			name:        "valid user",
+			setup:       setup,
+			expectedErr: nil,
+		},
+		{
+			name:        "invalid user",
+			setup:       setup,
+			expectedErr: ErrNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if tc.setup != nil {
+				err := tc.setup(ctx, s, testUser())
+				assert.NoError(t, err)
+			}
+
+			err := s.LogoutUser(ctx, 1)
+			assert.Equal(t, tc.expectedErr, err)
+
+			var count int
+
+			if err == nil {
+				err = db.QueryRow("SELECT COUNT(*) FROM auth_tokens").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 0, count)
+			} else {
+				err = db.QueryRow("SELECT COUNT(*) FROM auth_tokens").Scan(&count)
+				assert.NoError(t, err)
+				assert.Equal(t, 1, count)
 			}
 
 			t.Cleanup(func() {

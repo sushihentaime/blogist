@@ -83,7 +83,7 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	// Validate the token
 	v := common.NewValidator()
-	validateToken(v, token)
+	ValidateToken(v, token)
 	if !v.Valid() {
 		return v.ValidationError()
 	}
@@ -222,4 +222,61 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	}
 
 	return authToken, nil
+}
+
+func (s *UserService) GetUserByAccessToken(ctx context.Context, token string) (*User, error) {
+	// hash the token
+	v := common.NewValidator()
+	ValidateToken(v, token)
+	if !v.Valid() {
+		return nil, v.ValidationError()
+	}
+
+	hash := hashToken(token)
+
+	return s.m.getToken(ctx, hash)
+}
+
+func (s *UserService) LogoutUser(ctx context.Context, userId int) error {
+	// hash the token
+	v := common.NewValidator()
+	validateInt(v, userId, "user_id")
+	if !v.Valid() {
+		return v.ValidationError()
+	}
+
+	tx, err := s.m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	err = s.m.deleteAuthToken(tx, ctx, userId)
+	if err != nil {
+		_ = tx.Rollback
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == &AnonymousUser
+}
+
+func (u *User) IsActivated() bool {
+	return u.Activated
+}
+
+func (u *User) HasPermission(permission Permission) bool {
+	for _, p := range u.Permissions {
+		if p == permission {
+			return true
+		}
+	}
+
+	return false
 }

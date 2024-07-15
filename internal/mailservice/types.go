@@ -2,7 +2,6 @@ package mailservice
 
 import (
 	"bytes"
-	"log/slog"
 
 	"github.com/go-mail/mail/v2"
 
@@ -10,9 +9,14 @@ import (
 )
 
 type MailService struct {
-	mb common.MessageConsumer
-	m  Mailer
-	l  *slog.Logger
+	mb     common.MessageConsumer
+	m      Mailer
+	logger MailLogger
+}
+
+type MailLogger interface {
+	Error(msg string, args ...any)
+	Info(msg string, args ...any)
 }
 
 type Mail struct {

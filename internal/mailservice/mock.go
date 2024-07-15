@@ -56,3 +56,15 @@ func (m *MockMessageConsumer) Consume(key common.BindingKey, exchange common.Exc
 
 	return msgsChan, nil
 }
+
+type MockLogger struct {
+	mock.Mock
+}
+
+func (m *MockLogger) Error(msg string, fields ...any) {
+	m.Called(msg, fields)
+}
+
+func (m *MockLogger) Info(msg string, fields ...interface{}) {
+	m.Called(msg, fields)
+}

@@ -183,6 +183,24 @@ func (m *DBModel) deleteAuthToken(tx *sql.Tx, ctx context.Context, userID int) e
 		DELETE FROM auth_tokens
 		WHERE user_id = $1`
 
-	_, err := tx.ExecContext(ctx, query, userID)
-	return err
+	res, err := tx.ExecContext(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		switch {
+		case rows == 0:
+			return ErrNotFound
+		default:
+			return errors.New("too many rows affected")
+		}
+	}
+
+	return nil
 }

@@ -125,8 +125,31 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the user from the context
+	user := app.getUserContext(r)
+
+	// Call the user service
+	err := app.userService.LogoutUser(r.Context(), user.ID)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "user logged out"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+type createBlogRequest struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
 func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request) {
-	var input blogservice.CreateBlogRequest
+	var input createBlogRequest
 
 	// Parse the request body
 	err := app.parseJSON(w, r, &input)
@@ -135,8 +158,17 @@ func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// get the user from the context
+	user := app.getUserContext(r)
+
+	req := &blogservice.CreateBlogRequest{
+		Title:   input.Title,
+		Content: input.Content,
+		UserID:  user.ID,
+	}
+
 	// Call the blog service
-	err = app.blogService.CreateBlog(r.Context(), &input)
+	err = app.blogService.CreateBlog(r.Context(), req)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.ValidationError{}):
@@ -188,7 +220,6 @@ func (app *application) getBlogHandler(w http.ResponseWriter, r *http.Request) {
 type updateBlogRequest struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
-	UserID  int    `json:"user_id"`
 }
 
 func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request) {
@@ -208,11 +239,13 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	user := app.getUserContext(r)
+
 	blog := blogservice.Blog{
 		ID:      id,
 		Title:   input.Title,
 		Content: input.Content,
-		UserID:  input.UserID,
+		UserID:  user.ID,
 	}
 
 	// Call the blog service
@@ -237,10 +270,6 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-type deleteBlogRequest struct {
-	UserId int `json:"user_id"`
-}
-
 func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r, "id")
 	if err != nil {
@@ -248,17 +277,10 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var input deleteBlogRequest
-
-	// Parse the request body
-	err = app.parseJSON(w, r, &input)
-	if err != nil {
-		app.badRequestErrorResponse(w, r, err)
-		return
-	}
+	user := app.getUserContext(r)
 
 	// Call the blog service
-	err = app.blogService.DeleteBlog(r.Context(), id, input.UserId)
+	err = app.blogService.DeleteBlog(r.Context(), id, user.ID)
 	if err != nil {
 		switch {
 		case errors.Is(err, blogservice.ErrRecordNotFound):

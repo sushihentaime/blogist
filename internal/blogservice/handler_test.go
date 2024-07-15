@@ -36,7 +36,7 @@ func setupTestUser(db *sql.DB) (*int, error) {
 }
 
 func setupTestEnvironment(t *testing.T) (*BlogService, *sql.DB, func() error, *int, error) {
-	db := common.TestDB(t)
+	db := common.TestDB("file://../../migrations", t)
 
 	// set the password
 	randomBytes := make([]byte, 16)
@@ -103,7 +103,7 @@ func TestCreateBlog(t *testing.T) {
 				Content: "This is a test blog.",
 				UserID:  *userId,
 			},
-			expectedErr: fmt.Errorf("validation failed: map[title:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"title": "must be provided"}},
 		},
 		{
 			name: "empty content",
@@ -112,7 +112,7 @@ func TestCreateBlog(t *testing.T) {
 				Content: "",
 				UserID:  *userId,
 			},
-			expectedErr: fmt.Errorf("validation failed: map[content:must be provided]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"content": "must be provided"}},
 		},
 		{
 			name: "empty user ID",
@@ -120,7 +120,7 @@ func TestCreateBlog(t *testing.T) {
 				Title:   "Test Blog",
 				Content: "This is a test blog.",
 			},
-			expectedErr: fmt.Errorf("validation failed: map[id:must be greater than zero]"),
+			expectedErr: common.ValidationError{Errors: map[string]string{"user_id": "must be provided"}},
 		},
 		{
 			name: "invalid user ID",
@@ -129,7 +129,7 @@ func TestCreateBlog(t *testing.T) {
 				Content: "This is a test blog.",
 				UserID:  999,
 			},
-			expectedErr: fmt.Errorf("user with ID 999 does not exist"),
+			expectedErr: ErrUserForeignKey,
 		},
 	}
 
@@ -137,7 +137,7 @@ func TestCreateBlog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			fmt.Printf("blog: %v\n", tc.blog)
+			fmt.Printf("blog: %+v\n", tc.blog)
 			err := s.CreateBlog(ctx, tc.blog)
 			assert.Equal(t, tc.expectedErr, err)
 
@@ -234,7 +234,7 @@ func TestUpdateBlog(t *testing.T) {
 				UserID:  *userId,
 				Version: *versionId,
 			},
-			err: fmt.Errorf("validation failed: map[title:must be provided]"),
+			err: common.ValidationError{Errors: map[string]string{"title": "must be provided"}},
 		},
 		{
 			name: "empty content",
@@ -245,7 +245,7 @@ func TestUpdateBlog(t *testing.T) {
 				UserID:  *userId,
 				Version: *versionId,
 			},
-			err: fmt.Errorf("validation failed: map[content:must be provided]"),
+			err: common.ValidationError{Errors: map[string]string{"content": "must be provided"}},
 		},
 		{
 			name: "empty user ID",
@@ -255,7 +255,7 @@ func TestUpdateBlog(t *testing.T) {
 				Content: "This is an updated blog.",
 				Version: *versionId,
 			},
-			err: fmt.Errorf("validation failed: map[id:must be greater than zero]"),
+			err: common.ValidationError{Errors: map[string]string{"user_id": "must be provided"}},
 		},
 		{
 			name: "invalid user ID",
