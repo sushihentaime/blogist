@@ -19,6 +19,7 @@ func NewMailService(mb common.MessageConsumer, host, username, password, sender 
 // Send function that consumes messages from the message broker and sends emails to the user. Currently this function runs forever and I want a way to stop it.
 // ! Add a logger.Debug call to log the message received from the message broker.
 func (s *MailService) SendActivationEmail() {
+	fmt.Printf("Sending activation email\n")
 	msgs, err := s.mb.Consume(common.UserCreatedKey, common.UserExchange, common.UserCreatedQueue)
 	if err != nil {
 		s.logger.Error("could not consume message", slog.String("error", err.Error()))

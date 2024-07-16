@@ -5,31 +5,18 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/sushihentaime/blogist/internal/common"
 	"github.com/sushihentaime/blogist/internal/userservice"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func strptr(s string) *string {
 	return &s
-}
-
-func newTestApplication(t *testing.T) (*application, *sql.DB) {
-	db := common.TestDB("file://../migrations", t)
-	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-
-	return &application{
-		logger:      logger,
-		userService: userservice.NewUserService(db, nil),
-	}, db
 }
 
 func TestRecoverPanic(t *testing.T) {

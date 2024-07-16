@@ -42,17 +42,41 @@ func (s *BlogService) GetBlogByID(ctx context.Context, id int) (*Blog, error) {
 }
 
 // UpdateBlog updates a blog post. The user ID must be provided. Only the user who created the blog post can update it.
-func (s *BlogService) UpdateBlog(ctx context.Context, blog *Blog) error {
+func (s *BlogService) UpdateBlog(ctx context.Context, title, content string, id, userId *int, version *int) error {
 	v := common.NewValidator()
-	validateTitle(v, blog.Title)
-	validateContent(v, blog.Content)
-	validateInt(v, blog.ID, "id")
-	validateInt(v, blog.UserID, "user_id")
+	if title != "" {
+		validateTitle(v, title)
+	}
+
+	if content != "" {
+		validateContent(v, content)
+	}
+
+	if id != nil {
+		validateInt(v, *id, "id")
+	}
+
+	if userId != nil {
+		validateInt(v, *userId, "user_id")
+	}
+
+	if version != nil {
+		validateInt(v, *version, "version")
+	}
+
 	if !v.Valid() {
 		return v.ValidationError()
 	}
 
-	return s.m.updateBlog(ctx, blog)
+	blog := Blog{
+		ID:      *id,
+		Title:   title,
+		Content: content,
+		UserID:  *userId,
+		Version: *version,
+	}
+
+	return s.m.updateBlog(ctx, &blog)
 }
 
 // DeleteBlog deletes a blog post. Only the user who created the blog post can delete it.

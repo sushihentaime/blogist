@@ -26,7 +26,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Call the user service
-	err = app.userService.CreateUser(r.Context(), input.Username, input.Email, input.Password)
+	token, err := app.userService.CreateUser(r.Context(), input.Username, input.Email, input.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, userservice.ErrDuplicateEmail):
@@ -43,7 +43,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Return the response
-	err = app.writeJSON(w, http.StatusCreated, envelope{"message": "user account created"}, nil)
+	err = app.writeJSON(w, http.StatusCreated, envelope{"token": token}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -54,6 +54,7 @@ type activateUserRequest struct {
 	Token string `json:"token"`
 }
 
+// how to test this with the rabbitmq broker?
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input activateUserRequest
 
@@ -241,15 +242,25 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 
 	user := app.getUserContext(r)
 
-	blog := blogservice.Blog{
-		ID:      id,
-		Title:   input.Title,
-		Content: input.Content,
-		UserID:  user.ID,
+	// get the blog from the database
+	dbBlog, err := app.blogService.GetBlogByID(r.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, blogservice.ErrRecordNotFound):
+			app.notFoundErrorResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	if dbBlog.User.ID != user.ID {
+		app.unAuthorizedErrorResponse(w, r)
+		return
 	}
 
 	// Call the blog service
-	err = app.blogService.UpdateBlog(r.Context(), &blog)
+	err = app.blogService.UpdateBlog(r.Context(), input.Title, input.Content, &dbBlog.ID, &user.ID, &dbBlog.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, blogservice.ErrRecordNotFound):
@@ -277,7 +288,23 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	dbBlog, err := app.blogService.GetBlogByID(r.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, blogservice.ErrRecordNotFound):
+			app.notFoundErrorResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
 	user := app.getUserContext(r)
+
+	if dbBlog.User.ID != user.ID {
+		app.unAuthorizedErrorResponse(w, r)
+		return
+	}
 
 	// Call the blog service
 	err = app.blogService.DeleteBlog(r.Context(), id, user.ID)
@@ -353,7 +380,7 @@ func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) getBlogsByUserIdHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r, "id")
+	id, err := app.readIDParam(r, "userid")
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return

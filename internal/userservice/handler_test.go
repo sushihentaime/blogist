@@ -117,7 +117,7 @@ func TestSignUpUser(t *testing.T) {
 
 			fmt.Printf("username: %s\n", tc.payload.Username)
 
-			err := s.CreateUser(ctx, tc.payload.Username, tc.payload.Email, tc.payload.Password.Plain)
+			_, err := s.CreateUser(ctx, tc.payload.Username, tc.payload.Email, tc.payload.Password.Plain)
 			assert.Equal(t, tc.expectedErr, err)
 
 			var count int

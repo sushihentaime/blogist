@@ -12,7 +12,7 @@ type Blog struct {
 	Title string `json:"title"`
 	// Content is stored in Markdown format.
 	Content   string           `json:"content"`
-	User      userservice.User `json:"-"`
+	User      userservice.User `json:"user"`
 	UserID    int              `json:"user_id"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`

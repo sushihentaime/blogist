@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 )
 
 func (app *application) logError(r *http.Request, err error) {
@@ -10,9 +11,10 @@ func (app *application) logError(r *http.Request, err error) {
 		method  = r.Method
 		url     = r.URL.RequestURI()
 		message = err.Error()
+		debug   = debug.Stack()
 	)
 
-	app.logger.Error(message, slog.String("method", method), slog.String("url", url))
+	app.logger.Error(message, slog.String("method", method), slog.String("url", url), slog.String("stack", string(debug)))
 }
 
 func (app *application) writeErrorResponse(w http.ResponseWriter, r *http.Request, status int, message any) {

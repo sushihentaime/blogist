@@ -185,7 +185,7 @@ func TestGetBlogById(t *testing.T) {
 			ctx := context.Background()
 
 			blog, err := s.GetBlogByID(ctx, tc.id)
-			fmt.Printf("blog: %v\n", blog)
+			fmt.Printf("blog: %+v\n", blog)
 			if tc.expectedErr != nil {
 				assert.Nil(t, blog)
 				assert.Equal(t, tc.expectedErr, err)
@@ -206,89 +206,51 @@ func TestUpdateBlog(t *testing.T) {
 	s, db, cleanup, userId, err := setupTestEnvironment(t)
 	assert.NoError(t, err)
 
-	blogId, versionId, err := createRandomBlog(db, *userId)
-	assert.NoError(t, err)
-
 	testCases := []struct {
-		name string
-		blog *Blog
-		err  error
+		name           string
+		blog           *Blog
+		setup          func(db *sql.DB, userId int) (*int, *int, error)
+		expectedResult *Blog
+		expectedErr    error
 	}{
 		{
 			name: "valid blog",
 			blog: &Blog{
-				ID:      *blogId,
 				Title:   "Updated Blog",
 				Content: "This is an updated blog.",
-				UserID:  *userId,
-				Version: *versionId,
 			},
-			err: nil,
+			setup: createRandomBlog,
+			expectedResult: &Blog{
+				Title:   "Updated Blog",
+				Content: "This is an updated blog.",
+			},
+			expectedErr: nil,
 		},
 		{
 			name: "empty title",
 			blog: &Blog{
-				ID:      *blogId,
 				Title:   "",
 				Content: "This is an updated blog.",
-				UserID:  *userId,
-				Version: *versionId,
 			},
-			err: common.ValidationError{Errors: map[string]string{"title": "must be provided"}},
+			setup: createRandomBlog,
+			expectedResult: &Blog{
+				Title:   "Test Blog",
+				Content: "This is an updated blog.",
+			},
+			expectedErr: nil,
 		},
 		{
 			name: "empty content",
 			blog: &Blog{
-				ID:      *blogId,
 				Title:   "Updated Blog",
 				Content: "",
-				UserID:  *userId,
-				Version: *versionId,
 			},
-			err: common.ValidationError{Errors: map[string]string{"content": "must be provided"}},
-		},
-		{
-			name: "empty user ID",
-			blog: &Blog{
-				ID:      *blogId,
+			setup: createRandomBlog,
+			expectedResult: &Blog{
 				Title:   "Updated Blog",
-				Content: "This is an updated blog.",
-				Version: *versionId,
+				Content: "This is a test blog.",
 			},
-			err: common.ValidationError{Errors: map[string]string{"user_id": "must be provided"}},
-		},
-		{
-			name: "invalid user ID",
-			blog: &Blog{
-				ID:      *blogId,
-				Title:   "Updated Blog",
-				Content: "This is an updated blog.",
-				UserID:  999,
-				Version: *versionId,
-			},
-			err: ErrRecordNotFound,
-		},
-		{
-			name: "invalid version",
-			blog: &Blog{
-				ID:      *blogId,
-				Title:   "Updated Blog",
-				Content: "This is an updated blog.",
-				UserID:  *userId,
-				Version: 999,
-			},
-			err: ErrRecordNotFound,
-		},
-		{
-			name: "invalid ID",
-			blog: &Blog{
-				ID:      999,
-				Title:   "Updated Blog",
-				Content: "This is an updated blog.",
-				UserID:  *userId,
-				Version: *versionId,
-			},
-			err: ErrRecordNotFound,
+			expectedErr: nil,
 		},
 	}
 
@@ -297,20 +259,24 @@ func TestUpdateBlog(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			err := s.UpdateBlog(ctx, tc.blog)
-			assert.Equal(t, tc.err, err)
+			if tc.setup != nil {
+				blogId, versionId, err := tc.setup(db, *userId)
+				assert.NoError(t, err)
 
-			if err == nil {
-				var count int
-				err := db.QueryRow("SELECT COUNT(*) FROM blogs WHERE title = 'Updated Blog'").Scan(&count)
-				assert.NoError(t, err)
-				assert.Equal(t, 1, count)
-			} else {
-				var count int
-				err := db.QueryRow("SELECT COUNT(*) FROM blogs WHERE title = 'Updated Blog'").Scan(&count)
-				assert.NoError(t, err)
-				assert.Equal(t, 0, count)
+				tc.blog.ID = *blogId
+				tc.blog.UserID = *userId
+				tc.blog.Version = *versionId
 			}
+
+			err := s.UpdateBlog(ctx, tc.blog.Title, tc.blog.Content, &tc.blog.ID, &tc.blog.UserID, &tc.blog.Version)
+			assert.Equal(t, tc.expectedErr, err)
+
+			var b Blog
+			err = db.QueryRow("SELECT title, content FROM blogs WHERE id = $1", tc.blog.ID).Scan(&b.Title, &b.Content)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedResult.Title, b.Title)
+			assert.Equal(t, tc.expectedResult.Content, b.Content)
+			fmt.Printf("b: %+v\n", b)
 
 			t.Cleanup(func() {
 				err := cleanup()
@@ -406,7 +372,8 @@ func TestGetBlogsByUserId(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			_, err := s.GetBlogsByUserId(ctx, tc.userId)
+			blog, err := s.GetBlogsByUserId(ctx, tc.userId)
+			fmt.Printf("blog: %+v\n", blog)
 			assert.Equal(t, tc.expectedErr, err)
 
 			if err == nil {

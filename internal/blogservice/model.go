@@ -76,7 +76,10 @@ func (m *BlogModel) getBlogById(ctx context.Context, id int) (*Blog, error) {
 func (m *BlogModel) updateBlog(ctx context.Context, blog *Blog) error {
 	query := `
 		UPDATE blogs
-		SET title = $1, content = $2, version = version + 1
+		SET
+			title = COALESCE(NULLIF($1, ''), title),
+			content = COALESCE(NULLIF($2, ''), content),
+			version = version + 1
 		WHERE id = $3 AND version = $4 AND user_id = $5
 		RETURNING version, created_at, updated_at`
 

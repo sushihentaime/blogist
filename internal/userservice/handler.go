@@ -23,14 +23,14 @@ func NewUserService(db *sql.DB, mb *common.MessageBroker) *UserService {
 }
 
 // CreateUser creates a new user account and publish an user.created event.
-func (s *UserService) CreateUser(ctx context.Context, username, email, password string) error {
+func (s *UserService) CreateUser(ctx context.Context, username, email, password string) (*string, error) {
 	// Perform validation
 	v := common.NewValidator()
 	validateUsername(v, username)
 	validateEmail(v, email)
 	validatePassword(v, password)
 	if !v.Valid() {
-		return v.ValidationError()
+		return nil, v.ValidationError()
 	}
 
 	u := User{
@@ -42,19 +42,19 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 	// Set the password hash
 	err := u.Password.set(u.Password.Plain)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Insert the user into the database
 	err = s.m.insertUser(ctx, &u)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// create the token
 	token, err := s.m.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	data := struct {
@@ -67,16 +67,16 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 
 	emailData, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Publish the user created event
 	err = s.mb.Publish(ctx, emailData, common.UserCreatedKey, common.UserExchange)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &token.Plain, nil
 }
 
 // ActivateUser activates a user account using the token and deletes the token from the database and adds permission for the user to perform write operation.
