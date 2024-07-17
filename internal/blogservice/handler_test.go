@@ -406,32 +406,36 @@ func TestGetBlogs(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name        string
-		setup       func() error
-		limit       int
-		offset      int
-		expectedErr error
+		name          string
+		setup         func() error
+		limit         int
+		offset        int
+		expectedCount int
+		expectedErr   error
 	}{
 		{
-			name:        "valid limit and offset",
-			setup:       setup,
-			limit:       5,
-			offset:      0,
-			expectedErr: nil,
+			name:          "valid limit and offset",
+			setup:         setup,
+			limit:         2,
+			offset:        0,
+			expectedCount: 2,
+			expectedErr:   nil,
 		},
 		{
-			name:        "invalid limit",
-			setup:       setup,
-			limit:       0,
-			offset:      0,
-			expectedErr: nil,
+			name:          "invalid limit",
+			setup:         setup,
+			limit:         0,
+			offset:        0,
+			expectedCount: 5,
+			expectedErr:   nil,
 		},
 		{
-			name:        "invalid offset",
-			setup:       setup,
-			limit:       5,
-			offset:      -1,
-			expectedErr: nil,
+			name:          "invalid offset",
+			setup:         setup,
+			limit:         5,
+			offset:        -1,
+			expectedCount: 5,
+			expectedErr:   nil,
 		},
 	}
 
@@ -442,8 +446,9 @@ func TestGetBlogs(t *testing.T) {
 			err := tc.setup()
 			assert.NoError(t, err)
 
-			_, err = s.GetBlogs(ctx, &tc.limit, &tc.offset)
+			blogs, err := s.GetBlogs(ctx, tc.limit, tc.offset)
 			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedCount, len(*blogs))
 
 			if err == nil {
 				var count int
@@ -507,7 +512,7 @@ func TestGetBlogsByTitle(t *testing.T) {
 			err := tc.setup()
 			assert.NoError(t, err)
 
-			_, err = s.GetBlogsByTitle(ctx, tc.title, &tc.limit, &tc.offset)
+			_, err = s.GetBlogsByTitle(ctx, tc.title, tc.limit, tc.offset)
 			assert.Equal(t, tc.expectedErr, err)
 
 			t.Cleanup(func() {

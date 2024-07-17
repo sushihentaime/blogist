@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -755,12 +756,16 @@ func TestGetAllBlogsHandler(t *testing.T) {
 	testCases := []struct {
 		name       string
 		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		limit      int
+		offset     int
 		wantStatus int
 		wantBody   envelope
 	}{
 		{
 			name:       "Valid Request",
 			setup:      createTestBlog,
+			limit:      10,
+			offset:     0,
 			wantStatus: http.StatusOK,
 		},
 		{
@@ -771,6 +776,14 @@ func TestGetAllBlogsHandler(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 		},
+		{
+			name: "No Blogs",
+			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
+				token, userId, err := createTestUser(app, db, &userservice.User{Username: "testuser", Email: "testuser@example.com", Activated: true})
+				return token, userId, nil, err
+			},
+			wantStatus: http.StatusOK,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -778,7 +791,79 @@ func TestGetAllBlogsHandler(t *testing.T) {
 			token, _, _, err := tc.setup(app, db)
 			assert.NoError(t, err)
 
-			status, _, gotBody := ts.get(t, "/api/v1/blogs", token, nil)
+			status, _, gotBody := ts.get(t, fmt.Sprintf("/api/v1/blogs?limit=%d&offset=%d", tc.limit, tc.offset), token, nil)
+			assert.Equal(t, tc.wantStatus, status)
+
+			if tc.wantBody != nil {
+				assert.JSONEq(t, tc.wantBody.JSON(), gotBody.JSON())
+			}
+
+			t.Cleanup(func() {
+				_, err := db.Exec("DELETE FROM blogs")
+				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM users")
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestGetBlogsByTitle(t *testing.T) {
+	app, db := newTestApplication(t)
+
+	ts := newTestServer(t, app.routes())
+
+	testCases := []struct {
+		name       string
+		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		title      string
+		limit      int
+		offset     int
+		wantStatus int
+		wantBody   envelope
+	}{
+		{
+			name:       "Valid Request",
+			setup:      createTestBlog,
+			title:      "Test Blog",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "No Authentication Token",
+			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db)
+				return nil, userId, blogId, err
+			},
+			title:      "Test Blog",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "No Blogs",
+			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
+				token, userId, err := createTestUser(app, db, &userservice.User{Username: "testuser", Email: "testuser@example.com", Activated: true})
+				return token, userId, nil, err
+			},
+			title:      "Test Blog",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "Invalid Title",
+			setup:      createTestBlog,
+			title:      "Invalid Title",
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, _, _, err := tc.setup(app, db)
+			assert.NoError(t, err)
+
+			title := url.QueryEscape(tc.title)
+			url := fmt.Sprintf("/api/v1/blogs/search?q=%s&limit=%d&offset=%d", title, tc.limit, tc.offset)
+			status, _, gotBody := ts.get(t, url, token, nil)
+			fmt.Printf("gotBody: %v\n", gotBody)
 			assert.Equal(t, tc.wantStatus, status)
 
 			if tc.wantBody != nil {

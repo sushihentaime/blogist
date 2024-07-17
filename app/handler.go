@@ -347,7 +347,7 @@ func (app *application) getAllBlogsHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := app.readStringParam(r, "title")
+	title, err := app.readStringParam(r, "q")
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return

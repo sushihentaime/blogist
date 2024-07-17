@@ -97,34 +97,46 @@ func (app *application) readIDParam(r *http.Request, key string) (int, error) {
 	return id, nil
 }
 
-func (app *application) readLimitOffsetParams(r *http.Request) (*int, *int, error) {
+func (app *application) readLimitOffsetParams(r *http.Request) (int, int, error) {
 	params := r.URL.Query()
 
-	var limit, offset *int
+	// params := httprouter.ParamsFromContext(r.Context())
+
+	var limit, offset int
 
 	if params.Get("limit") != "" {
 		l, err := strconv.Atoi(params.Get("limit"))
 		if err != nil {
-			return nil, nil, errors.New("invalid limit parameter")
+			return 0, 0, errors.New("invalid limit parameter")
 		}
-		limit = &l
+
+		if l > 100 {
+			return 0, 0, errors.New("limit parameter must be a positive integer less than or equal to 100")
+		}
+
+		limit = l
 	}
 
 	if params.Get("offset") != "" {
 		o, err := strconv.Atoi(params.Get("offset"))
 		if err != nil {
-			return nil, nil, errors.New("invalid offset parameter")
+			return 0, 0, errors.New("invalid offset parameter")
 		}
-		offset = &o
+
+		if o < 0 {
+			return 0, 0, errors.New("offset parameter must be a positive integer")
+		}
+
+		offset = o
 	}
 
 	return limit, offset, nil
 }
 
 func (app *application) readStringParam(r *http.Request, key string) (string, error) {
-	params := httprouter.ParamsFromContext(r.Context())
+	params := r.URL.Query()
+	value := params.Get(key)
 
-	value := params.ByName(key)
 	if value == "" {
 		return "", errors.New("invalid string parameter")
 	}

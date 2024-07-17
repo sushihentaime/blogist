@@ -162,7 +162,7 @@ func (m *BlogModel) getBlogsByUserId(ctx context.Context, userID int) (*[]Blog, 
 }
 
 // getBlogs to get all blogs. set limit and offset to get paginated results and sort the results by created_at descending order
-func (m *BlogModel) getBlogs(ctx context.Context, limit, offset int) ([]Blog, error) {
+func (m *BlogModel) getBlogs(ctx context.Context, limit, offset int) (*[]Blog, error) {
 	query := `
 		SELECT id, title, content, user_id, created_at, updated_at, version
 		FROM blogs
@@ -185,11 +185,15 @@ func (m *BlogModel) getBlogs(ctx context.Context, limit, offset int) ([]Blog, er
 		blogs = append(blogs, blog)
 	}
 
-	return blogs, nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &blogs, nil
 }
 
 // getBlogsByTitle is a method to get blogs by title. This method is used to demonstrate the use of LIKE operator in SQL query.
-func (m *BlogModel) getBlogsByTitle(ctx context.Context, title string, limit, offset int) ([]Blog, error) {
+func (m *BlogModel) getBlogsByTitle(ctx context.Context, title string, limit, offset int) (*[]Blog, error) {
 	query := `
 		SELECT id, title, content, user_id, created_at, updated_at, version
 		FROM blogs
@@ -217,5 +221,5 @@ func (m *BlogModel) getBlogsByTitle(ctx context.Context, title string, limit, of
 		return nil, err
 	}
 
-	return blogs, nil
+	return &blogs, nil
 }
