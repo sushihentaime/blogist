@@ -89,7 +89,11 @@ func (ts *testServer) post(t *testing.T, path string, data any, token *string) (
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *token))
+
+	if token != nil {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *token))
+	}
+
 	res, err := ts.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -879,4 +880,44 @@ func TestGetBlogsByTitle(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestConcurrentGetAndUpdate(t *testing.T) {
+	app, db := newTestApplication(t)
+
+	ts := newTestServer(t, app.routes())
+
+	token, _, blogId, err := createTestBlog(app, db)
+	assert.NoError(t, err)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		t.Log("Starting update blog request")
+		status, _, gotBody := ts.put(t, fmt.Sprintf("/api/v1/blogs/update/%d", *blogId), token, map[string]any{"title": "Updated Blog", "content": "This is an updated blog"})
+		assert.Equal(t, http.StatusOK, status)
+		assert.JSONEq(t, `{"message":"blog updated"}`, gotBody.JSON())
+		t.Log("Finished update blog request")
+	}()
+
+	go func() {
+		defer wg.Done()
+		t.Log("Starting get blog request")
+		status, _, gotBody := ts.get(t, fmt.Sprintf("/api/v1/blogs/view/%d", *blogId), token, nil)
+		assert.Equal(t, http.StatusOK, status)
+		t.Logf("gotBody: %+v\n", gotBody)
+		t.Log("Finished get blog request")
+	}()
+
+	wg.Wait()
+
+	t.Cleanup(func() {
+		_, err := db.Exec("DELETE FROM blogs")
+		assert.NoError(t, err)
+
+		_, err = db.Exec("DELETE FROM users")
+		assert.NoError(t, err)
+	})
 }

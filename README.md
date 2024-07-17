@@ -5,4 +5,4 @@ Problem to resolved
 5. Add swagger
 6. Learn about mocking?
 7. Add docker
-8. write some code for scenario analysis?
+8. Concurrency handling on read and write of blog

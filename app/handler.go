@@ -54,7 +54,7 @@ type activateUserRequest struct {
 	Token string `json:"token"`
 }
 
-// how to test this with the rabbitmq broker?
+// ! how to test this with the rabbitmq broker?
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input activateUserRequest
 
