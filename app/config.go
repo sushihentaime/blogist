@@ -7,11 +7,11 @@ type Config struct {
 	Environment string `mapstructure:"ENVIRONMENT"`
 
 	DB struct {
-		Host     string `mapstructure:"DB_HOST"`
-		Port     string `mapstructure:"DB_PORT"`
-		User     string `mapstructure:"DB_USER"`
-		Password string `mapstructure:"DB_PASSWORD"`
-		Name     string `mapstructure:"DB_NAME"`
+		Host     string `mapstructure:"POSTGRES_HOST"`
+		Port     string `mapstructure:"POSTGRES_PORT"`
+		User     string `mapstructure:"POSTGRES_USER"`
+		Password string `mapstructure:"POSTGRES_PASSWORD"`
+		Name     string `mapstructure:"POSTGRES_DB"`
 	}
 
 	Mail struct {
