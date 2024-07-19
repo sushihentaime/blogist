@@ -5,9 +5,9 @@ Hi,
 
 Thanks for signing up for an account. We're excited to have you on board!
 
-Kindly activate your account by clicking on the link below:
+Please send a request to the `PUT /api/v1/users/activate` endpoint with the following JSON payload to activate your account:
 
-{{.ActivationLink}}
+{"token": "{{.ActivationToken}}"}
 
 Please note that this is a one-time use link and it will expire in 3 days.
 
@@ -27,9 +27,9 @@ The Team
 <body>
     <p>Hi,</p>
     <p>Thanks for signing up for an account. We're excited to have you on board!</p>
-    <p>Kindly activate your account by clicking on the link below:</p>
-    <p><a href="{{.ActivationLink}}">{{.LinkName}}</a></p>
-    <p>Please note that this is a one-time use token and it will expire in 3 days.</p>
+    <p>Please send a request to the <code>PUT /api/v1/users/activate</code> endpoint with the following JSON payload to activate your account:</p>
+    <pre>{"token": "{{.ActivationToken}}"}</pre>
+    <p>Please note that this is a one-time use link and it will expire in 3 days.</p>
     <p>Thanks,</p>
     <p>The Team</p>
 </body>

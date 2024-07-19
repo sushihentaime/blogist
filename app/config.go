@@ -6,28 +6,22 @@ type Config struct {
 	Port        string `mapstructure:"PORT"`
 	Environment string `mapstructure:"ENVIRONMENT"`
 
-	DB struct {
-		Host     string `mapstructure:"POSTGRES_HOST"`
-		Port     string `mapstructure:"POSTGRES_PORT"`
-		User     string `mapstructure:"POSTGRES_USER"`
-		Password string `mapstructure:"POSTGRES_PASSWORD"`
-		Name     string `mapstructure:"POSTGRES_DB"`
-	}
+	DBHost     string `mapstructure:"POSTGRES_HOST"`
+	DBPort     string `mapstructure:"POSTGRES_PORT"`
+	DBUser     string `mapstructure:"POSTGRES_USER"`
+	DBPassword string `mapstructure:"POSTGRES_PASSWORD"`
+	DBName     string `mapstructure:"POSTGRES_DB"`
 
-	Mail struct {
-		Host     string `mapstructure:"MAIL_HOST"`
-		Port     int    `mapstructure:"MAIL_PORT"`
-		User     string `mapstructure:"MAIL_USER"`
-		Password string `mapstructure:"MAIL_PASSWORD"`
-		Sender   string `mapstructure:"MAIL_SENDER"`
-	}
+	MailHost     string `mapstructure:"MAIL_HOST"`
+	MailPort     int    `mapstructure:"MAIL_PORT"`
+	MailUser     string `mapstructure:"MAIL_USER"`
+	MailPassword string `mapstructure:"MAIL_PASSWORD"`
+	MailSender   string `mapstructure:"MAIL_SENDER"`
 
-	RabbitMQ struct {
-		Host     string `mapstructure:"RABBITMQ_HOST"`
-		Port     string `mapstructure:"RABBITMQ_PORT"`
-		User     string `mapstructure:"RABBITMQ_USER"`
-		Password string `mapstructure:"RABBITMQ_PASSWORD"`
-	}
+	MQHost     string `mapstructure:"RABBITMQ_HOST"`
+	MQPort     string `mapstructure:"RABBITMQ_PORT"`
+	MQUser     string `mapstructure:"RABBITMQ_USER"`
+	MQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -35,6 +29,8 @@ func loadConfig(path string) (*Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
+
+	viper.AutomaticEnv()
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

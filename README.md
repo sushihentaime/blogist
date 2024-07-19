@@ -4,5 +4,8 @@ Problem to resolved
 3. Add testing for the middlewares (Done)
 5. Add swagger
 6. Learn about mocking?
-7. Add docker
+7. Add docker (Done)
 8. Concurrency handling on read and write of blog (Done)
+
+Current problem
+1. testing takes too long around 100s to complete

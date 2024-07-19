@@ -12,9 +12,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /go/src/app/app .
-# COPY the env file
-RUN ls -la
-# COPY --from=builder /go/src/app/.env .
+COPY --from=builder /go/src/app/.env .
 RUN chmod +x ./app
 CMD ["./app"]
 

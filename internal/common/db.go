@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 func NewDB(host, port, user, password, name string, maxOpenConns, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
@@ -16,7 +18,7 @@ func NewDB(host, port, user, password, name string, maxOpenConns, maxIdleConns i
 func connectDB(URI string, maxOpenConns int, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
 	db, err := sql.Open("postgres", URI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open the database connection: %w", err)
 	}
 
 	db.SetMaxOpenConns(maxOpenConns)
@@ -27,8 +29,8 @@ func connectDB(URI string, maxOpenConns int, maxIdleConns int, maxIdleTime time.
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
-		return nil, err
+		CloseDB(db)
+		return nil, fmt.Errorf("failed to ping the database: %w", err)
 	}
 
 	return db, nil

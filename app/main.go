@@ -32,9 +32,10 @@ func main() {
 		logger.Error("failed to load configuration", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	fmt.Printf("config: %+v\n", cfg)
 
 	// Initialize the database
-	db, err := common.NewDB(cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.Name, 10, 5, 15*time.Minute)
+	db, err := common.NewDB(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, 10, 5, 15*time.Minute)
 	if err != nil {
 		logger.Error("failed to connect to the database", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -43,7 +44,7 @@ func main() {
 
 	// Initialize the message broker
 	// Create the URI and connect to the message broker
-	URI := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.RabbitMQ.User, cfg.RabbitMQ.Password, cfg.RabbitMQ.Host, cfg.RabbitMQ.Port)
+	URI := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.MQUser, cfg.MQPassword, cfg.MQHost, cfg.MQPort)
 	broker, err := common.NewMessageBroker(URI)
 	if err != nil {
 		logger.Error("failed to connect to the message broker", slog.String("error", err.Error()))
@@ -65,7 +66,7 @@ func main() {
 		userService: userservice.NewUserService(db, broker),
 		blogService: blogservice.NewBlogService(db),
 		broker:      broker,
-		mailService: mailservice.NewMailService(broker, cfg.Mail.Host, cfg.Mail.User, cfg.Mail.Password, cfg.Mail.Sender, cfg.Mail.Port, logger),
+		mailService: mailservice.NewMailService(broker, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 	}
 
 	// Initialize the consumer

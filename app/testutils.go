@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,7 +52,7 @@ func readResponse(t *testing.T, res *http.Response) (int, http.Header, envelope)
 
 func newTestApplication(t *testing.T) (*application, *sql.DB) {
 	db := common.TestDB("file://../migrations", t)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	rabbitURI := common.TestRabbitMQ(t)
 	rabbitmq, err := common.NewMessageBroker(rabbitURI)
 	assert.NoError(t, err)
@@ -68,7 +67,7 @@ func newTestApplication(t *testing.T) (*application, *sql.DB) {
 		config:      cfg,
 		logger:      logger,
 		userService: userservice.NewUserService(db, rabbitmq),
-		mailService: mailservice.NewMailService(rabbitmq, cfg.Mail.Host, cfg.Mail.User, cfg.Mail.Password, cfg.Mail.Sender, cfg.Mail.Port, logger),
+		mailService: mailservice.NewMailService(rabbitmq, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 		broker:      rabbitmq,
 		blogService: blogservice.NewBlogService(db),
 	}

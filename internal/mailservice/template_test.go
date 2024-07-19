@@ -19,11 +19,9 @@ func TestParseTemplate(t *testing.T) {
 			name:         "success",
 			templateName: "activation_email.html",
 			data: struct {
-				ActivationLink string
-				LinkName       string
+				ActivationToken string
 			}{
-				ActivationLink: "http://localhost:8080/activate?token=123",
-				LinkName:       "Activate Account",
+				ActivationToken: "123456",
 			},
 			expectedErr: false,
 		},
