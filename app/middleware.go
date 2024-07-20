@@ -58,7 +58,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		user, err := app.userService.GetUserByAccessToken(r.Context(), token)
 		if err != nil {
 			switch {
-			case errors.Is(err, userservice.ErrNotFound):
+			case errors.Is(err, common.ErrRecordNotFound):
 				app.invalidAuthenticationTokenResponse(w, r)
 			case errors.As(err, &common.ValidationError{}):
 				app.invalidAuthenticationTokenResponse(w, r)
@@ -112,3 +112,5 @@ func (app *application) requirePermission(next http.HandlerFunc, permission user
 
 	return app.requireActivatedUser(fn)
 }
+
+// create a caching middleware

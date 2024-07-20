@@ -69,7 +69,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	err = app.userService.ActivateUser(r.Context(), input.Token)
 	if err != nil {
 		switch {
-		case errors.Is(err, userservice.ErrNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		case errors.As(err, &common.ValidationError{}):
 			validationErr := err.(common.ValidationError)
@@ -106,7 +106,7 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	token, err := app.userService.LoginUser(r.Context(), input.Username, input.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, userservice.ErrNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.invalidCredentialsErrorResponse(w, r)
 		case errors.Is(err, userservice.ErrAuthenticationFailure):
 			app.invalidCredentialsErrorResponse(w, r)
@@ -200,7 +200,7 @@ func (app *application) getBlogHandler(w http.ResponseWriter, r *http.Request) {
 	blog, err := app.blogService.GetBlogByID(r.Context(), id)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		case errors.As(err, &common.ValidationError{}):
 			validationErr := err.(common.ValidationError)
@@ -246,7 +246,7 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 	dbBlog, err := app.blogService.GetBlogByID(r.Context(), id)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
@@ -263,7 +263,7 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 	err = app.blogService.UpdateBlog(r.Context(), input.Title, input.Content, &dbBlog.ID, &user.ID, &dbBlog.Version)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		case errors.As(err, &common.ValidationError{}):
 			validationErr := err.(common.ValidationError)
@@ -291,7 +291,7 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 	dbBlog, err := app.blogService.GetBlogByID(r.Context(), id)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
@@ -310,7 +310,7 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 	err = app.blogService.DeleteBlog(r.Context(), id, user.ID)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
@@ -389,7 +389,7 @@ func (app *application) getBlogsByUserIdHandler(w http.ResponseWriter, r *http.R
 	blogs, err := app.blogService.GetBlogsByUserId(r.Context(), id)
 	if err != nil {
 		switch {
-		case errors.Is(err, blogservice.ErrRecordNotFound):
+		case errors.Is(err, common.ErrRecordNotFound):
 			app.notFoundErrorResponse(w, r)
 		case errors.As(err, &common.ValidationError{}):
 			validationErr := err.(common.ValidationError)

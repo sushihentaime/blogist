@@ -5,19 +5,20 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/sushihentaime/blogist/internal/common"
 )
 
 var (
 	ErrDuplicateUsername = errors.New("duplicate username")
 	ErrDuplicateEmail    = errors.New("duplicate email")
-	ErrNotFound          = errors.New("user not found")
 )
 
 func newUserModel(db *sql.DB) *DBModel {
 	return &DBModel{db: db}
 }
 
-func (m *DBModel) insertUser(ctx context.Context, u *User) error {
+func (m *DBModel) insertUser(u *User) error {
 	query := `
 		INSERT INTO users (username, email, password)
 		VALUES ($1, $2, $3)
@@ -28,6 +29,10 @@ func (m *DBModel) insertUser(ctx context.Context, u *User) error {
 		u.Email,
 		u.Password.hash,
 	}
+
+	// Create a new context for external calls
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	err := m.db.QueryRowContext(ctx, query, args...).Scan(&u.ID)
 	if err != nil {
@@ -43,7 +48,7 @@ func (m *DBModel) insertUser(ctx context.Context, u *User) error {
 	return nil
 }
 
-func (m *DBModel) getUserByUsername(ctx context.Context, username string) (*User, error) {
+func (m *DBModel) getUserByUsername(username string) (*User, error) {
 	query := `
 		SELECT id, username, email, password, version
 		FROM users
@@ -51,11 +56,14 @@ func (m *DBModel) getUserByUsername(ctx context.Context, username string) (*User
 
 	var u User
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	err := m.db.QueryRowContext(ctx, query, username).Scan(&u.ID, &u.Username, &u.Email, &u.Password.hash, &u.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrNotFound
+			return nil, common.ErrRecordNotFound
 		default:
 			return nil, err
 		}
@@ -64,11 +72,14 @@ func (m *DBModel) getUserByUsername(ctx context.Context, username string) (*User
 	return &u, nil
 }
 
-func (m *DBModel) activateUserAccount(tx *sql.Tx, ctx context.Context, id int, version int) error {
+func (m *DBModel) activateUserAccount(tx *sql.Tx, id int, version int) error {
 	query := `
 		UPDATE users
 		SET activated = true
 		WHERE id = $1 AND version = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	res, err := tx.ExecContext(ctx, query, id, version)
 	if err != nil {
@@ -82,7 +93,7 @@ func (m *DBModel) activateUserAccount(tx *sql.Tx, ctx context.Context, id int, v
 	if rows != 1 {
 		switch {
 		case rows == 0:
-			return ErrNotFound
+			return common.ErrRecordNotFound
 		default:
 			return errors.New("too many rows affected")
 		}
@@ -91,11 +102,14 @@ func (m *DBModel) activateUserAccount(tx *sql.Tx, ctx context.Context, id int, v
 	return nil
 }
 
-func (m *DBModel) updateUserPassword(ctx context.Context, pwd Password, id int, version int) error {
+func (m *DBModel) updateUserPassword(pwd Password, id int, version int) error {
 	query := `
 		UPDATE users
 		SET password = $1
 		WHERE id = $2 AND version = $3`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	_, err := m.db.ExecContext(ctx, query, pwd.hash, id, version)
 	if err != nil {
@@ -105,7 +119,7 @@ func (m *DBModel) updateUserPassword(ctx context.Context, pwd Password, id int, 
 	return nil
 }
 
-func (m *DBModel) getToken(ctx context.Context, token []byte) (*User, error) {
+func (m *DBModel) getToken(token []byte) (*User, error) {
 	var u User
 
 	query := `
@@ -114,6 +128,9 @@ func (m *DBModel) getToken(ctx context.Context, token []byte) (*User, error) {
 		INNER JOIN auth_tokens t ON u.id = t.user_id
 		INNER JOIN user_permissions p on u.id = p.user_id
 		WHERE t.access_token = $1 AND t.access_token_expiry > $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	rows, err := m.db.QueryContext(ctx, query, token, time.Now())
 	if err != nil {
@@ -136,7 +153,7 @@ func (m *DBModel) getToken(ctx context.Context, token []byte) (*User, error) {
 	}
 
 	if u.ID == 0 {
-		return nil, ErrNotFound
+		return nil, common.ErrRecordNotFound
 	}
 
 	return &u, nil

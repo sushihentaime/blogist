@@ -176,7 +176,7 @@ func TestGetBlogById(t *testing.T) {
 		{
 			name:        "invalid ID",
 			id:          999,
-			expectedErr: ErrRecordNotFound,
+			expectedErr: common.ErrRecordNotFound,
 		},
 	}
 
@@ -309,13 +309,13 @@ func TestDeleteBlog(t *testing.T) {
 			name:        "invalid ID",
 			blogId:      999,
 			userId:      *userId,
-			expectedErr: ErrRecordNotFound,
+			expectedErr: common.ErrRecordNotFound,
 		},
 		{
 			name:        "invalid user ID",
 			blogId:      *blogId,
 			userId:      999,
-			expectedErr: ErrRecordNotFound,
+			expectedErr: common.ErrRecordNotFound,
 		},
 	}
 
@@ -364,7 +364,7 @@ func TestGetBlogsByUserId(t *testing.T) {
 		{
 			name:        "invalid ID",
 			userId:      999,
-			expectedErr: ErrRecordNotFound,
+			expectedErr: common.ErrRecordNotFound,
 		},
 	}
 

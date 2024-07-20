@@ -94,12 +94,10 @@ func SetupUserExchange(mb *MessageBroker) error {
 }
 
 func (mb *MessageBroker) Publish(ctx context.Context, msg []byte, key BindingKey, exchange Exchange) error {
-	fmt.Printf("Publishing message: %s\n", msg)
 	err := mb.ch.PublishWithContext(ctx, string(exchange), string(key), false, false, amqp.Publishing{
 		ContentType: "text/plain",
 		Body:        msg,
 	})
-	fmt.Printf("Message published\n")
 	if err != nil {
 		return fmt.Errorf("could not publish message: %w", err)
 	}

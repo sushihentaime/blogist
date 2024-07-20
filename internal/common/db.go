@@ -9,6 +9,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var (
+	ErrRecordNotFound = fmt.Errorf("record not found")
+)
+
 func NewDB(host, port, user, password, name string, maxOpenConns, maxIdleConns int, maxIdleTime time.Duration) (*sql.DB, error) {
 	URI := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
 	return connectDB(URI, maxOpenConns, maxIdleConns, maxIdleTime)

@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
+	"github.com/sushihentaime/blogist/internal/common"
 )
 
 var (
-	ErrRecordNotFound = errors.New("record not found")
 	ErrUserForeignKey = errors.New("user_id does not exist")
 )
 
@@ -30,10 +31,13 @@ func ForeignKeyError(err error, name string) bool {
 	return false
 }
 
-func (m *BlogModel) insert(ctx context.Context, title, content string, id int) error {
+func (m *BlogModel) insert(title, content string, id int) error {
 	query := `
 		INSERT INTO blogs (title, content, user_id)
 		VALUES ($1, $2, $3)`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	_, err := m.db.ExecContext(ctx, query, title, content, id)
 	if err != nil {
@@ -49,12 +53,15 @@ func (m *BlogModel) insert(ctx context.Context, title, content string, id int) e
 }
 
 // getBlogById is a method to get a blog by its ID joining the users table to get the user's name.
-func (m *BlogModel) getBlogById(ctx context.Context, id int) (*Blog, error) {
+func (m *BlogModel) getBlogById(id int) (*Blog, error) {
 	query := `
 		SELECT b.id, b.title, b.content, b.user_id, b.created_at, b.updated_at, b.version, u.username
 		FROM blogs b
 		JOIN users u ON b.user_id = u.id
 		WHERE b.id = $1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	row := m.db.QueryRowContext(ctx, query, id)
 
@@ -63,7 +70,7 @@ func (m *BlogModel) getBlogById(ctx context.Context, id int) (*Blog, error) {
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
+			return nil, common.ErrRecordNotFound
 		default:
 			return nil, err
 		}
@@ -73,7 +80,7 @@ func (m *BlogModel) getBlogById(ctx context.Context, id int) (*Blog, error) {
 
 }
 
-func (m *BlogModel) updateBlog(ctx context.Context, blog *Blog) error {
+func (m *BlogModel) updateBlog(blog *Blog) error {
 	query := `
 		UPDATE blogs
 		SET
@@ -83,11 +90,14 @@ func (m *BlogModel) updateBlog(ctx context.Context, blog *Blog) error {
 		WHERE id = $3 AND version = $4 AND user_id = $5
 		RETURNING version, created_at, updated_at`
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	err := m.db.QueryRowContext(ctx, query, blog.Title, blog.Content, blog.ID, blog.Version, blog.UserID).Scan(&blog.Version, &blog.CreatedAt, &blog.UpdatedAt)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return ErrRecordNotFound
+			return common.ErrRecordNotFound
 		default:
 			return err
 		}
@@ -96,10 +106,13 @@ func (m *BlogModel) updateBlog(ctx context.Context, blog *Blog) error {
 	return nil
 }
 
-func (m *BlogModel) deleteBlog(ctx context.Context, blogId, userId int) error {
+func (m *BlogModel) deleteBlog(blogId, userId int) error {
 	query := `
 		DELETE FROM blogs
 		WHERE id = $1 AND user_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	res, err := m.db.ExecContext(ctx, query, blogId, userId)
 	if err != nil {
@@ -114,7 +127,7 @@ func (m *BlogModel) deleteBlog(ctx context.Context, blogId, userId int) error {
 	if rows != 1 {
 		switch {
 		case rows == 0:
-			return ErrRecordNotFound
+			return common.ErrRecordNotFound
 		default:
 			return fmt.Errorf("expected 1 row to be affected, got %d", rows)
 		}
@@ -123,12 +136,15 @@ func (m *BlogModel) deleteBlog(ctx context.Context, blogId, userId int) error {
 	return nil
 }
 
-func (m *BlogModel) getBlogsByUserId(ctx context.Context, userID int) (*[]Blog, error) {
+func (m *BlogModel) getBlogsByUserId(userID int) (*[]Blog, error) {
 	query := `
 		SELECT id, title, content, user_id, created_at, updated_at, version
 		FROM blogs
 		WHERE user_id = $1
 		ORDER BY created_at DESC`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	rows, err := m.db.QueryContext(ctx, query, userID)
 	if err != nil {
@@ -155,7 +171,7 @@ func (m *BlogModel) getBlogsByUserId(ctx context.Context, userID int) (*[]Blog, 
 	}
 
 	if !found {
-		return nil, ErrRecordNotFound
+		return nil, common.ErrRecordNotFound
 	}
 
 	return &blogs, nil

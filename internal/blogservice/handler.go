@@ -27,7 +27,7 @@ func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) er
 		return v.ValidationError()
 	}
 
-	return s.m.insert(ctx, req.Title, req.Content, req.UserID)
+	return s.m.insert(req.Title, req.Content, req.UserID)
 }
 
 // GetBlogByID returns a blog post by its ID.
@@ -38,7 +38,7 @@ func (s *BlogService) GetBlogByID(ctx context.Context, id int) (*Blog, error) {
 		return nil, v.ValidationError()
 	}
 
-	return s.m.getBlogById(ctx, id)
+	return s.m.getBlogById(id)
 }
 
 // UpdateBlog updates a blog post. The user ID must be provided. Only the user who created the blog post can update it.
@@ -76,7 +76,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, title, content string, id,
 		Version: *version,
 	}
 
-	return s.m.updateBlog(ctx, &blog)
+	return s.m.updateBlog(&blog)
 }
 
 // DeleteBlog deletes a blog post. Only the user who created the blog post can delete it.
@@ -88,7 +88,7 @@ func (s *BlogService) DeleteBlog(ctx context.Context, blogId, userId int) error 
 		return v.ValidationError()
 	}
 
-	return s.m.deleteBlog(ctx, blogId, userId)
+	return s.m.deleteBlog(blogId, userId)
 }
 
 // GetBlogsByUserId returns all blog posts by a user.
@@ -99,7 +99,7 @@ func (s *BlogService) GetBlogsByUserId(ctx context.Context, userID int) (*[]Blog
 		return nil, v.ValidationError()
 	}
 
-	return s.m.getBlogsByUserId(ctx, userID)
+	return s.m.getBlogsByUserId(userID)
 }
 
 // GetBlogs returns all blog posts. Default limit is 10 and default offset is 0.
