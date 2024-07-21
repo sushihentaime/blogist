@@ -3,12 +3,13 @@ package blogservice
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/sushihentaime/blogist/internal/common"
 )
 
-func NewBlogService(db *sql.DB) *BlogService {
-	return &BlogService{m: newBlogModel(db)}
+func NewBlogService(db *sql.DB, c *common.Cache) *BlogService {
+	return &BlogService{m: newBlogModel(db), c: c}
 }
 
 type CreateBlogRequest struct {
@@ -38,7 +39,23 @@ func (s *BlogService) GetBlogByID(ctx context.Context, id int) (*Blog, error) {
 		return nil, v.ValidationError()
 	}
 
-	return s.m.getBlogById(id)
+	fmt.Println("I am working")
+	// Check cache first before querying the database.
+	if blog, ok := s.c.Get(common.CacheKeyBlog(id)); ok {
+		return blog.(*Blog), nil
+	}
+
+	fmt.Println("I am working 2")
+
+	blog, err := s.m.getBlogById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the pointer to the blog post.
+	s.c.Set(common.CacheKeyBlog(id), blog)
+
+	return blog, nil
 }
 
 // UpdateBlog updates a blog post. The user ID must be provided. Only the user who created the blog post can update it.
@@ -99,7 +116,20 @@ func (s *BlogService) GetBlogsByUserId(ctx context.Context, userID int) (*[]Blog
 		return nil, v.ValidationError()
 	}
 
-	return s.m.getBlogsByUserId(userID)
+	// Check cache first before querying the database.
+	if blogs, ok := s.c.Get(common.CacheKeyBlogsByUserId(userID)); ok {
+		return blogs.(*[]Blog), nil
+	}
+
+	blogs, err := s.m.getBlogsByUserId(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the pointer to the slice of blog posts.
+	s.c.Set(common.CacheKeyBlogsByUserId(userID), blogs)
+
+	return blogs, nil
 }
 
 // GetBlogs returns all blog posts. Default limit is 10 and default offset is 0.
@@ -112,7 +142,20 @@ func (s *BlogService) GetBlogs(ctx context.Context, limit, offset int) (*[]Blog,
 		offset = 0
 	}
 
-	return s.m.getBlogs(ctx, limit, offset)
+	// Check cache first before querying the database.
+	if blogs, ok := s.c.Get(common.CacheKeyBlogs(limit, offset)); ok {
+		return blogs.(*[]Blog), nil
+	}
+
+	blogs, err := s.m.getBlogs(ctx, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the pointer to the slice of blog posts.
+	s.c.Set(common.CacheKeyBlogs(limit, offset), blogs)
+
+	return blogs, nil
 }
 
 func (s *BlogService) GetBlogsByTitle(ctx context.Context, title string, limit, offset int) (*[]Blog, error) {
@@ -130,5 +173,18 @@ func (s *BlogService) GetBlogsByTitle(ctx context.Context, title string, limit, 
 		offset = 0
 	}
 
-	return s.m.getBlogsByTitle(ctx, title, limit, offset)
+	// Check cache first before querying the database.
+	if blogs, ok := s.c.Get(title); ok {
+		return blogs.(*[]Blog), nil
+	}
+
+	blogs, err := s.m.getBlogsByTitle(ctx, title, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the pointer to the slice of blog posts.
+	s.c.Set(title, blogs)
+
+	return blogs, nil
 }

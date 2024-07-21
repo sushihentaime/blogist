@@ -11,6 +11,7 @@ Problem to resolved
 11. Add caching layer
 12. Add retry mechanism for my send activation email mq (Done)
 13. Add log analytics for this app
+14. Add caching for the session management
 
 Additional Features
 1. Add admin service

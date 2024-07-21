@@ -59,12 +59,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	cache := common.NewCache(5*time.Minute, 10*time.Minute)
+
 	// Initialize the services
 	app := &application{
 		config:      cfg,
 		logger:      logger,
 		userService: userservice.NewUserService(db, broker),
-		blogService: blogservice.NewBlogService(db),
+		blogService: blogservice.NewBlogService(db, cache),
 		broker:      broker,
 		mailService: mailservice.NewMailService(broker, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 	}

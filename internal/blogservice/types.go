@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/sushihentaime/blogist/internal/common"
 	"github.com/sushihentaime/blogist/internal/userservice"
 )
 
@@ -25,4 +26,5 @@ type BlogModel struct {
 
 type BlogService struct {
 	m *BlogModel
+	c *common.Cache
 }

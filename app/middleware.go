@@ -114,3 +114,6 @@ func (app *application) requirePermission(next http.HandlerFunc, permission user
 }
 
 // create a caching middleware
+func (app *application) cacheMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+}

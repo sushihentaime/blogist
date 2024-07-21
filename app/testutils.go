@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/sushihentaime/blogist/internal/blogservice"
@@ -63,13 +64,15 @@ func newTestApplication(t *testing.T) (*application, *sql.DB) {
 	cfg, err := loadConfig("../.test.env")
 	assert.NoError(t, err)
 
+	cache := common.NewCache(5*time.Minute, 10*time.Minute)
+
 	app := &application{
 		config:      cfg,
 		logger:      logger,
 		userService: userservice.NewUserService(db, rabbitmq),
 		mailService: mailservice.NewMailService(rabbitmq, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 		broker:      rabbitmq,
-		blogService: blogservice.NewBlogService(db),
+		blogService: blogservice.NewBlogService(db, cache),
 	}
 
 	return app, db
