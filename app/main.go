@@ -32,10 +32,9 @@ func main() {
 		logger.Error("failed to load configuration", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	fmt.Printf("config: %+v\n", cfg)
 
 	// Initialize the database
-	db, err := common.NewDB(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, 10, 5, 15*time.Minute)
+	db, err := common.NewDB(cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, 10, 5, 15*time.Minute)
 	if err != nil {
 		logger.Error("failed to connect to the database", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -44,7 +43,7 @@ func main() {
 
 	// Initialize the message broker
 	// Create the URI and connect to the message broker
-	URI := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.MQUser, cfg.MQPassword, cfg.MQHost, cfg.MQPort)
+	URI := fmt.Sprintf("amqp://%s:%s@%s/", cfg.MQUser, cfg.MQPassword, cfg.MQHost)
 	broker, err := common.NewMessageBroker(URI)
 	if err != nil {
 		logger.Error("failed to connect to the message broker", slog.String("error", err.Error()))

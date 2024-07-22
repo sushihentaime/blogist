@@ -7,3 +7,8 @@ CREATE TABLE IF NOT EXISTS blogs (
     updated_at timestamptz NOT NULL DEFAULT NOW(),
     version INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TRIGGER update_blogs_updated_at
+BEFORE UPDATE ON blogs
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();

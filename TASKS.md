@@ -8,12 +8,14 @@ Problem to resolved
 8. Concurrency handling on read and write of blog (Done)
 9. Add License (Done)
 10. Clean up the files to make it less redundant and cleaner to read (Done)
-11. Add caching layer for blog service
+11. Add caching layer for blog service (Done)
 12. Add retry mechanism for my send activation email mq (Done)
 13. Add log analytics for this app
-14. Add caching for the session management
-15. Adjustment to the updated_at date
-16. Add caching layer for user service
+14. Adjustment to the updated_at date (Done)
+15. Add caching layer for user service (Done)
+16. Add nginx in front?
+17. Add a healthcheck endpoint (Done)
+18. Add docker mailserver for self hosting mail server
 
 Additional Features
 1. Add admin service

@@ -13,6 +13,9 @@ func (app *application) routes() http.Handler {
 	router.NotFound = http.HandlerFunc(app.notFoundErrorResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedErrorResponse)
 
+	// health check
+	router.HandlerFunc(http.MethodGet, "/health", app.healthCheckHandler)
+
 	// user service
 	router.HandlerFunc(http.MethodPost, "/api/v1/users/register", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPut, "/api/v1/users/activate", app.activateUserHandler)

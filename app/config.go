@@ -5,9 +5,10 @@ import "github.com/spf13/viper"
 type Config struct {
 	Port        string `mapstructure:"PORT"`
 	Environment string `mapstructure:"ENVIRONMENT"`
+	Version     string `mapstructure:"VERSION"`
 
-	DBHost     string `mapstructure:"POSTGRES_HOST"`
-	DBPort     string `mapstructure:"POSTGRES_PORT"`
+	DBHost string `mapstructure:"POSTGRES_HOST"`
+	// DBPort     string `mapstructure:"POSTGRES_PORT"`
 	DBUser     string `mapstructure:"POSTGRES_USER"`
 	DBPassword string `mapstructure:"POSTGRES_PASSWORD"`
 	DBName     string `mapstructure:"POSTGRES_DB"`
@@ -18,8 +19,8 @@ type Config struct {
 	MailPassword string `mapstructure:"MAIL_PASSWORD"`
 	MailSender   string `mapstructure:"MAIL_SENDER"`
 
-	MQHost     string `mapstructure:"RABBITMQ_HOST"`
-	MQPort     string `mapstructure:"RABBITMQ_PORT"`
+	MQHost string `mapstructure:"RABBITMQ_HOST"`
+	// MQPort     string `mapstructure:"RABBITMQ_PORT"`
 	MQUser     string `mapstructure:"RABBITMQ_USER"`
 	MQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
 }

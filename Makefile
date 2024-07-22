@@ -8,3 +8,15 @@ migrate-init:
 .PHONY: test
 test:
 	@go test -v ./... 
+
+.PHONY: docbuild
+docbuild:
+	@docker compose build
+
+.PHONY: docup
+docup:
+	@docker compose up
+
+.PHONY: docdown
+docdown:
+	@docker compose down

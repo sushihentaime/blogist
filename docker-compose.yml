@@ -6,9 +6,15 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db_migrate
-      - rabbit
-  
+      rabbit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
   db:
     image: postgres:14-alpine
     env_file:
@@ -35,7 +41,7 @@ services:
         condition: service_healthy
 
   rabbit:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
