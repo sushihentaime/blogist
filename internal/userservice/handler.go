@@ -15,10 +15,11 @@ var (
 	ErrAuthenticationFailure = fmt.Errorf("unauthorized access")
 )
 
-func NewUserService(db *sql.DB, mb *common.MessageBroker) *UserService {
+func NewUserService(db *sql.DB, mb *common.MessageBroker, c *common.Cache) *UserService {
 	return &UserService{
 		m:  newUserModel(db),
 		mb: mb,
+		c:  c,
 	}
 }
 
@@ -224,6 +225,27 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	return authToken, nil
 }
 
+func (s *UserService) getUserByAccessToken(token string) (*User, error) {
+	hash := hashToken(token)
+
+	// get the user from the cache
+	if user, ok := s.c.Get(common.CacheKeyUserByAccessToken(hash)); ok {
+		return user.(*User), nil
+	}
+
+	// get the user from the database
+	user, err := s.m.getToken(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	// store the user in the cache
+	s.c.Set(common.CacheKeyUserByAccessToken(hash), user, AccessTokenTime)
+
+	return user, nil
+}
+
+// use cache to store the user
 func (s *UserService) GetUserByAccessToken(ctx context.Context, token string) (*User, error) {
 	// hash the token
 	v := common.NewValidator()
@@ -232,9 +254,7 @@ func (s *UserService) GetUserByAccessToken(ctx context.Context, token string) (*
 		return nil, v.ValidationError()
 	}
 
-	hash := hashToken(token)
-
-	return s.m.getToken(hash)
+	return s.getUserByAccessToken(token)
 }
 
 func (s *UserService) LogoutUser(ctx context.Context, userId int) error {

@@ -7,4 +7,4 @@ migrate-init:
 
 .PHONY: test
 test:
-	@go test -v ./... -cover 2>&1 | grep -i "FAIL"
+	@go test -v ./... 

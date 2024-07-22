@@ -29,6 +29,7 @@ func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, er
 	db := common.TestDB("file://../../migrations", t)
 	connURL := common.TestRabbitMQ(t)
 	mb, err := common.NewMessageBroker(connURL)
+	cache := common.NewCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("could not create message broker: %w", err)
 	}
@@ -59,10 +60,12 @@ func setupTestEnvironment(t *testing.T) (*UserService, *sql.DB, func() error, er
 			return err
 		}
 
+		cache.Flush()
+
 		return nil
 	}
 
-	return NewUserService(db, mb), db, cleanup, nil
+	return NewUserService(db, mb, cache), db, cleanup, nil
 }
 
 func TestSignUpUser(t *testing.T) {

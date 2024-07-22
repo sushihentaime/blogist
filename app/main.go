@@ -65,7 +65,7 @@ func main() {
 	app := &application{
 		config:      cfg,
 		logger:      logger,
-		userService: userservice.NewUserService(db, broker),
+		userService: userservice.NewUserService(db, broker, cache),
 		blogService: blogservice.NewBlogService(db, cache),
 		broker:      broker,
 		mailService: mailservice.NewMailService(broker, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),

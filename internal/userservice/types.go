@@ -29,6 +29,7 @@ var (
 type UserService struct {
 	m  *DBModel
 	mb common.MessageProducer
+	c  *common.Cache
 }
 
 type DBModel struct {

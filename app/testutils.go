@@ -69,7 +69,7 @@ func newTestApplication(t *testing.T) (*application, *sql.DB) {
 	app := &application{
 		config:      cfg,
 		logger:      logger,
-		userService: userservice.NewUserService(db, rabbitmq),
+		userService: userservice.NewUserService(db, rabbitmq, cache),
 		mailService: mailservice.NewMailService(rabbitmq, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 		broker:      rabbitmq,
 		blogService: blogservice.NewBlogService(db, cache),
