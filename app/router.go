@@ -31,5 +31,5 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPut, "/api/v1/blogs/update/:id", app.requirePermission(app.updateBlogHandler, userservice.PermissionWriteBlog))
 	router.HandlerFunc(http.MethodDelete, "/api/v1/blogs/delete/:id", app.requirePermission(app.deleteBlogHandler, userservice.PermissionWriteBlog))
 
-	return app.recoverPanic(app.logRequest(app.authenticate(router)))
+	return app.recoverPanic(app.enableCORS(app.logRequest(app.authenticate(router))))
 }

@@ -40,7 +40,7 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Vary", "Authorization")
+		w.Header().Add("Vary", "Authorization")
 
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -111,4 +111,38 @@ func (app *application) requirePermission(next http.HandlerFunc, permission user
 	})
 
 	return app.requireActivatedUser(fn)
+}
+
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// The Vary header is used to tell the browser that the response can vary depending on the value of the Origin header. This is useful when the server is serving different responses based on the origin of the request. The Vary header tells the browser to cache the response based on the value of the Origin header.
+		w.Header().Add("Vary", "Origin")
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+
+		// An origin consists of 3 components: protocol, host and port. When a request is made from a browser http:www.example.com, the Origin header is included in the request. However, when the request is made from a ip address, the Origin header is not included in the request. This is because the ip address does not have a host component.
+
+		// When the Origin header is included in the request, the server should check if the origin is in the list of trusted origins. If the origin is in the list of trusted origins, the server should include the Access-Control-Allow-Origin header in the response with the value of the origin. This allows the browser to make the request.
+
+		// For allowing preflight requests, the server should check if the request method is OPTIONS and the Access-Control-Request-Method header is not empty. If the conditions are met, the server should include the Access-Control-Allow-Methods and Access-Control-Allow-Headers headers in the response. The server should also set the status code to 200.
+		origin := r.Header.Get("Origin")
+
+		if origin != "" {
+			for i := range app.config.TrustedOrigins {
+				if origin == app.config.TrustedOrigins[i] {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+
+					if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+						w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+						w.WriteHeader(http.StatusOK)
+						return
+					}
+
+					break
+				}
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

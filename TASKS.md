@@ -16,15 +16,22 @@ Problem to resolved
 16. Add nginx in front?
 17. Add a healthcheck endpoint (Done)
 18. Add docker mailserver for self hosting mail server
+19. Add rate limiting
+20. Add example data for the blogs as well as users
+21. Add test inside of docker
 
 Additional Features
-1. Add admin service
-2. Add like service
-3. Add comment service
-4. Add dashboard service
-5. Add better permission control
-6. Add file upload service
-7. Add sanitization for the content in markdown format
+1. Add a profile service
+2. Add admin service
+3. Add like service
+4. Add comment service
+5. Add dashboard service
+6. Add better permission control
+7. Add file upload service
+8. Add sanitization for the content in markdown format
 
 Current problem
 1. testing takes too long around 100s to complete all tests as there are many integration testing rather than mocking 
+
+Learning
+1. Learn about CORS

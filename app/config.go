@@ -3,9 +3,10 @@ package main
 import "github.com/spf13/viper"
 
 type Config struct {
-	Port        string `mapstructure:"PORT"`
-	Environment string `mapstructure:"ENVIRONMENT"`
-	Version     string `mapstructure:"VERSION"`
+	Port           string   `mapstructure:"PORT"`
+	Environment    string   `mapstructure:"ENVIRONMENT"`
+	Version        string   `mapstructure:"VERSION"`
+	TrustedOrigins []string `mapstructure:"TRUSTED_ORIGINS"`
 
 	DBHost string `mapstructure:"POSTGRES_HOST"`
 	// DBPort     string `mapstructure:"POSTGRES_PORT"`
