@@ -145,3 +145,76 @@ func TestAuthenticate(t *testing.T) {
 		})
 	}
 }
+func TestEnableCORS(t *testing.T) {
+	app, _ := newTestApplication(t)
+
+	// Create a test HTTP handler that will be wrapped by the enableCORS middleware
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Wrap the handler with the enableCORS middleware
+	middleware := app.enableCORS(handler)
+
+	tests := []struct {
+		name                       string
+		origin                     string
+		method                     string
+		accessControlRequestMethod *string
+		expectedStatus             int
+	}{
+		{
+			name:           "Valid Origin and Method",
+			origin:         "http://example.com",
+			method:         http.MethodGet,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:                       "Valid Origin and Preflight Request",
+			origin:                     "http://example.com",
+			method:                     http.MethodOptions,
+			accessControlRequestMethod: strptr(http.MethodPut),
+			expectedStatus:             http.StatusOK,
+		},
+		{
+			name:           "Invalid Origin",
+			origin:         "http://invalid.com",
+			method:         http.MethodGet,
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, "/", nil)
+			req.Header.Set("Origin", tt.origin)
+			if tt.accessControlRequestMethod != nil {
+				req.Header.Set("Access-Control-Request-Method", *tt.accessControlRequestMethod)
+			}
+
+			res := httptest.NewRecorder()
+
+			middleware.ServeHTTP(res, req)
+
+			assert.Equal(t, tt.expectedStatus, res.Code)
+
+			for i := range app.config.TrustedOrigins {
+				if tt.origin == app.config.TrustedOrigins[i] {
+					assert.Equal(t, tt.origin, res.Header().Get("Access-Control-Allow-Origin"))
+				} else {
+					assert.Empty(t, res.Header().Get("Access-Control-Allow-Origin"))
+				}
+			}
+
+			// Check the Access-Control-Allow-Methods header for preflight requests
+			if tt.method == http.MethodOptions && tt.origin != "" {
+
+				assert.Equal(t, "OPTIONS, PUT, PATCH, DELETE", res.Header().Get("Access-Control-Allow-Methods"))
+				assert.Equal(t, "Content-Type, Authorization", res.Header().Get("Access-Control-Allow-Headers"))
+			} else {
+				assert.Empty(t, res.Header().Get("Access-Control-Allow-Methods"))
+				assert.Empty(t, res.Header().Get("Access-Control-Allow-Headers"))
+			}
+		})
+	}
+}

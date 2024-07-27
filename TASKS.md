@@ -19,6 +19,8 @@ Problem to resolved
 19. Add rate limiting
 20. Add example data for the blogs as well as users
 21. Add test inside of docker
+22. Add CORS middleware and testing (Done)
+23. Learn about vim
 
 Additional Features
 1. Add a profile service
