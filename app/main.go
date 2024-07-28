@@ -33,6 +33,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.Environment == "development" {
+		cfg.RateLimitEnabled = false
+	} else {
+		cfg.RateLimitEnabled = true
+	}
+
 	// Initialize the database
 	db, err := common.NewDB(cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, 10, 5, 15*time.Minute)
 	if err != nil {

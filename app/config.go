@@ -26,6 +26,11 @@ type Config struct {
 	// MQPort     string `mapstructure:"RABBITMQ_PORT"`
 	MQUser     string `mapstructure:"RABBITMQ_USER"`
 	MQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
+
+	// Rate Limiter Configuration
+	RateLimitRPS     int  `mapstructure:"RATE_LIMIT_RPS"`
+	RateLimitBurst   int  `mapstructure:"RATE_LIMIT_BURST"`
+	RateLimitEnabled bool `mapstructure:"RATE_LIMIT_ENABLED"`
 }
 
 func loadConfig(path string) (*Config, error) {

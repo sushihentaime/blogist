@@ -145,8 +145,13 @@ func TestAuthenticate(t *testing.T) {
 		})
 	}
 }
+
 func TestEnableCORS(t *testing.T) {
-	app, _ := newTestApplication(t)
+	app := &application{
+		config: &Config{
+			TrustedOrigins: []string{"http://example.com"},
+		},
+	}
 
 	// Create a test HTTP handler that will be wrapped by the enableCORS middleware
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +160,9 @@ func TestEnableCORS(t *testing.T) {
 
 	// Wrap the handler with the enableCORS middleware
 	middleware := app.enableCORS(handler)
+
+	server := httptest.NewServer(middleware)
+	defer server.Close()
 
 	tests := []struct {
 		name                       string
@@ -216,5 +224,57 @@ func TestEnableCORS(t *testing.T) {
 				assert.Empty(t, res.Header().Get("Access-Control-Allow-Headers"))
 			}
 		})
+	}
+}
+
+func TestRateLimit(t *testing.T) {
+	app := &application{
+		config: &Config{
+			RateLimitRPS:     2,
+			RateLimitBurst:   4,
+			RateLimitEnabled: true,
+		},
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	middleware := app.rateLimit(handler)
+
+	server := httptest.NewServer(middleware)
+	defer server.Close()
+
+	tests := []struct {
+		name           string
+		requests       int
+		expectedStatus int
+	}{
+		{
+			name:           "Within Limit",
+			requests:       4,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Over Limit",
+			requests:       6,
+			expectedStatus: http.StatusTooManyRequests,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var lastStatusCode int
+
+			for i := 0; i < tt.requests; i++ {
+				res, err := http.Get(server.URL)
+				assert.NoError(t, err)
+
+				lastStatusCode = res.StatusCode
+			}
+
+			assert.Equal(t, tt.expectedStatus, lastStatusCode)
+		})
+
 	}
 }

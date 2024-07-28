@@ -61,3 +61,8 @@ func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter
 	message := "invalid or missing authentication token"
 	app.writeErrorResponse(w, r, http.StatusForbidden, message)
 }
+
+func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
+	message := "rate limit exceeded"
+	app.writeErrorResponse(w, r, http.StatusTooManyRequests, message)
+}

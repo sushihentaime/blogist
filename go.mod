@@ -16,6 +16,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.32.0
 	golang.org/x/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/time v0.5.0
 )
 
 require (

@@ -16,7 +16,7 @@ Problem to resolved
 16. Add nginx in front?
 17. Add a healthcheck endpoint (Done)
 18. Add docker mailserver for self hosting mail server
-19. Add rate limiting
+19. Add rate limiting (Done)
 20. Add example data for the blogs as well as users
 21. Add test inside of docker
 22. Add CORS middleware and testing (Done)
