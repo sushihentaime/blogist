@@ -31,6 +31,10 @@ type Config struct {
 	RateLimitRPS     int  `mapstructure:"RATE_LIMIT_RPS"`
 	RateLimitBurst   int  `mapstructure:"RATE_LIMIT_BURST"`
 	RateLimitEnabled bool `mapstructure:"RATE_LIMIT_ENABLED"`
+
+	// Certificate and Key files for TLS
+	TLSCertFile string `mapstructure:"TLS_CERT_FILE"`
+	TLSKeyFile  string `mapstructure:"TLS_KEY_FILE"`
 }
 
 func loadConfig(path string) (*Config, error) {

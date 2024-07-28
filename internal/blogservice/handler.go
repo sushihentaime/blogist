@@ -28,7 +28,9 @@ func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) er
 		return v.ValidationError()
 	}
 
-	return s.m.insert(req.Title, req.Content, req.UserID)
+	content := sanitizeMarkdown(req.Content)
+
+	return s.m.insert(req.Title, content, req.UserID)
 }
 
 // GetBlogByID returns a blog post by its ID.
@@ -60,6 +62,7 @@ func (s *BlogService) GetBlogByID(ctx context.Context, id int) (*Blog, error) {
 
 // UpdateBlog updates a blog post. The user ID must be provided. Only the user who created the blog post can update it.
 func (s *BlogService) UpdateBlog(ctx context.Context, title, content string, id, userId *int, version *int) error {
+
 	v := common.NewValidator()
 	if title != "" {
 		validateTitle(v, title)
@@ -88,7 +91,7 @@ func (s *BlogService) UpdateBlog(ctx context.Context, title, content string, id,
 	blog := Blog{
 		ID:      *id,
 		Title:   title,
-		Content: content,
+		Content: sanitizeMarkdown(content),
 		UserID:  *userId,
 		Version: *version,
 	}

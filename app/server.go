@@ -12,6 +12,7 @@ import (
 )
 
 func (app *application) serve(port string) error {
+
 	srv := &http.Server{
 		Addr:         port,
 		Handler:      app.routes(),
@@ -46,12 +47,19 @@ func (app *application) serve(port string) error {
 
 	app.logger.Info("starting server", slog.String("port", port), slog.String("env", app.config.Environment))
 
-	err := srv.ListenAndServe()
-	if !errors.Is(err, http.ErrServerClosed) {
-		return err
+	if app.config.Environment == "production" {
+		err := srv.ListenAndServeTLS(app.config.TLSCertFile, app.config.TLSKeyFile)
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	} else {
+		err := srv.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
 	}
 
-	err = <-shutdownError
+	err := <-shutdownError
 	if err != nil {
 		return err
 	}
