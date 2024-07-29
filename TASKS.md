@@ -24,6 +24,7 @@ Problem to resolved
 22. Learn about vim
 23. Do TLS Config for the server (Done)
 24. Create a CRON Job that inform the user that its account will be deleted after 1 month of inactive use
+25. Add Load Testing & adding metrics
 
 Additional Features
 

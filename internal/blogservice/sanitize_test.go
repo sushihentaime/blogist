@@ -25,9 +25,9 @@ func TestSanitizeMarkdown(t *testing.T) {
 		{
 			name: "multiple script tags",
 			input: `Here is some text.
-					<script>alert('Hello, world!');</script>
-					More text.
-					<SCRIPT SRC="evil.js"></SCRIPT>`,
+	<script>alert('Hello, world!');</script>
+	More text.
+	<SCRIPT SRC="evil.js"></SCRIPT>`,
 			want: "Here is some text.\n\t\n\tMore text.\n\t",
 		},
 	}
@@ -38,5 +38,4 @@ func TestSanitizeMarkdown(t *testing.T) {
 			assert.Equal(t, tc.want, output)
 		})
 	}
-
 }
