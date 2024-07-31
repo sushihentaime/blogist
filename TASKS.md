@@ -14,7 +14,7 @@ Problem to resolved
 12. Add log analytics for this app
 13. Adjustment to the updated_at date (Done)
 14. Add caching layer for user service (Done)
-15. Add nginx in front?
+15. Add nginx or caddy as a reverse proxy in front?
 16. Add a healthcheck endpoint (Done)
 17. Add docker mailserver for self hosting mail server
 18. Add rate limiting (Done)
@@ -24,9 +24,12 @@ Problem to resolved
 22. Learn about vim
 23. Do TLS Config for the server (Done)
 24. Create a CRON Job that inform the user that its account will be deleted after 1 month of inactive use
-25. Add Load Testing & adding metrics
+25. Add Load Testing
 26. Allow the content markdown to also includes images and codes
-27. could not start postgres container: port not found: creating reaper failed: failed to create container - Testcontainers error waiting to resolve
+27. could not start postgres container: port not found: creating reaper failed: failed to create container - Testcontainers error waiting to resolve (Done)
+28. Add metrics middleware (Done)
+29. Test the updated_at of blogs
+30. Rewrite the realip package
 
 Additional Features
 

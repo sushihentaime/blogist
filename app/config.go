@@ -35,6 +35,9 @@ type Config struct {
 	// Certificate and Key files for TLS
 	TLSCertFile string `mapstructure:"TLS_CERT_FILE"`
 	TLSKeyFile  string `mapstructure:"TLS_KEY_FILE"`
+
+	// Metrics Configuration
+	MetricsEnabled bool `mapstructure:"METRICS_ENABLED"`
 }
 
 func loadConfig(path string) (*Config, error) {

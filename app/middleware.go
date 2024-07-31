@@ -5,13 +5,13 @@ import (
 	"expvar"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/sushihentaime/blogist/internal/common"
 	"github.com/sushihentaime/blogist/internal/userservice"
+	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
 )
 
@@ -183,11 +183,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			return
 		}
 
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+		ip := realip.FromRequest(r)
 
 		mu.Lock()
 
@@ -211,13 +207,25 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 func (app *application) metrics(next http.Handler) http.Handler {
 	var (
-		totalRequestsReceived             = expvar.NewInt("total_requests_received")
-		totalResponsesSent                = expvar.NewInt("total_responses_sent")
-		totalProcessingTimeMicroseconds   = expvar.NewInt("total_processing_time_microseconds")
-		averageProcessingTimeMicroseconds = expvar.NewInt("average_processing_time_microseconds")
+		totalRequestsReceived *expvar.Int
+		totalResponsesSent    *expvar.Int
+		totalProcessingTime   *expvar.Int
 	)
 
+	if !app.config.MetricsEnabled {
+		return next
+	}
+
+	totalRequestsReceived = expvar.NewInt("total_requests_received")
+	totalResponsesSent = expvar.NewInt("total_responses_sent")
+	totalProcessingTime = expvar.NewInt("total_processing_time")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !app.config.MetricsEnabled {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 		totalRequestsReceived.Add(1)
 
@@ -225,9 +233,6 @@ func (app *application) metrics(next http.Handler) http.Handler {
 		totalResponsesSent.Add(1)
 
 		duration := time.Since(start).Microseconds()
-		totalProcessingTimeMicroseconds.Add(duration)
-
-		average := totalProcessingTimeMicroseconds.Value() / totalResponsesSent.Value()
-		averageProcessingTimeMicroseconds.Set(average)
+		totalProcessingTime.Add(duration)
 	})
 }

@@ -118,8 +118,6 @@ func TestSignUpUser(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			fmt.Printf("username: %s\n", tc.payload.Username)
-
 			_, err := s.CreateUser(ctx, tc.payload.Username, tc.payload.Email, tc.payload.Password.Plain)
 			assert.Equal(t, tc.expectedErr, err)
 

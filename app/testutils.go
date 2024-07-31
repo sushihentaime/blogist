@@ -34,8 +34,6 @@ func newTestServer(t *testing.T, h http.Handler) *testServer {
 func readResponse(t *testing.T, res *http.Response) (int, http.Header, envelope) {
 	defer res.Body.Close()
 
-	t.Logf("response url: %s", res.Request.URL)
-
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)

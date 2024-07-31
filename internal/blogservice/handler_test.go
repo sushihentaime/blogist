@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"fmt"
 	"testing"
 	"time"
 
@@ -82,7 +81,6 @@ func createRandomBlog(db *sql.DB, userId int) (*int, *int, error) {
 
 func TestCreateBlog(t *testing.T) {
 	s, db, cleanup, userId, err := setupTestEnvironment(t)
-	fmt.Printf("userId: %v\n", *userId)
 	assert.NoError(t, err)
 
 	testCases := []struct {
@@ -140,7 +138,6 @@ func TestCreateBlog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			fmt.Printf("blog: %+v\n", tc.blog)
 			err := s.CreateBlog(ctx, tc.blog)
 			assert.Equal(t, tc.expectedErr, err)
 
@@ -188,7 +185,6 @@ func TestGetBlogById(t *testing.T) {
 			ctx := context.Background()
 
 			blog, err := s.GetBlogByID(ctx, tc.id)
-			fmt.Printf("blog: %+v\n", blog)
 			if tc.expectedErr != nil {
 				assert.Nil(t, blog)
 				assert.Equal(t, tc.expectedErr, err)
@@ -279,7 +275,6 @@ func TestUpdateBlog(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedResult.Title, b.Title)
 			assert.Equal(t, tc.expectedResult.Content, b.Content)
-			fmt.Printf("b: %+v\n", b)
 
 			t.Cleanup(func() {
 				err := cleanup()
@@ -375,8 +370,7 @@ func TestGetBlogsByUserId(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			blog, err := s.GetBlogsByUserId(ctx, tc.userId)
-			fmt.Printf("blog: %+v\n", blog)
+			_, err := s.GetBlogsByUserId(ctx, tc.userId)
 			assert.Equal(t, tc.expectedErr, err)
 
 			if err == nil {

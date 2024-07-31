@@ -864,7 +864,6 @@ func TestGetBlogsByTitle(t *testing.T) {
 			title := url.QueryEscape(tc.title)
 			url := fmt.Sprintf("/api/v1/blogs/search?q=%s&limit=%d&offset=%d", title, tc.limit, tc.offset)
 			status, _, gotBody := ts.get(t, url, token, nil)
-			fmt.Printf("gotBody: %v\n", gotBody)
 			assert.Equal(t, tc.wantStatus, status)
 
 			if tc.wantBody != nil {
