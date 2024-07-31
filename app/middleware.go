@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"log/slog"
 	"net"
@@ -205,5 +206,28 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		mu.Unlock()
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) metrics(next http.Handler) http.Handler {
+	var (
+		totalRequestsReceived             = expvar.NewInt("total_requests_received")
+		totalResponsesSent                = expvar.NewInt("total_responses_sent")
+		totalProcessingTimeMicroseconds   = expvar.NewInt("total_processing_time_microseconds")
+		averageProcessingTimeMicroseconds = expvar.NewInt("average_processing_time_microseconds")
+	)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		totalRequestsReceived.Add(1)
+
+		next.ServeHTTP(w, r)
+		totalResponsesSent.Add(1)
+
+		duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(duration)
+
+		average := totalProcessingTimeMicroseconds.Value() / totalResponsesSent.Value()
+		averageProcessingTimeMicroseconds.Set(average)
 	})
 }

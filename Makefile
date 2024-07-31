@@ -7,7 +7,7 @@ migrate-init:
 
 .PHONY: test
 test:
-	@go test -v ./... 
+	@go test -v ./... -cover  
 
 .PHONY: docbuild
 docbuild:
@@ -20,3 +20,23 @@ docup:
 .PHONY: docdown
 docdown:
 	@docker compose down
+
+# Quality Control
+.PHONY: audit
+audit:
+	@echo 'Tidying and verifying module dependencies...'
+	go mod tidy
+	go mod verify
+	@echo 'Formatting code...'
+	go fmt ./...
+	@echo 'Vetting code...'
+	go vet ./...
+	staticcheck ./...
+	@echo 'Running tests...'
+	go test -race -vet=off ./...
+
+.PHONY: vendor
+vendor:
+	@go mod tidy
+	@go mod verify
+	@go mod vendor

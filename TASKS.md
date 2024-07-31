@@ -25,6 +25,8 @@ Problem to resolved
 23. Do TLS Config for the server (Done)
 24. Create a CRON Job that inform the user that its account will be deleted after 1 month of inactive use
 25. Add Load Testing & adding metrics
+26. Allow the content markdown to also includes images and codes
+27. could not start postgres container: port not found: creating reaper failed: failed to create container - Testcontainers error waiting to resolve
 
 Additional Features
 

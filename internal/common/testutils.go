@@ -19,7 +19,7 @@ import (
 func TestRabbitMQ(t *testing.T) string {
 	ctx := context.Background()
 
-	container, err := rabbitmq.Run(ctx, "rabbitmq:3.12.11-management-alpine", rabbitmq.WithAdminUsername("guest"), rabbitmq.WithAdminPassword("guest"))
+	container, err := rabbitmq.RunContainer(ctx, testcontainers.WithImage("rabbitmq:3.12.11-management-alpine"), rabbitmq.WithAdminPassword("guest"), rabbitmq.WithAdminUsername("guest"))
 	if err != nil {
 		t.Fatalf("could not start rabbitmq container: %v", err)
 	}
@@ -55,8 +55,8 @@ func dbMigrate(file, dsn string) (*migrate.Migrate, error) {
 func TestDB(filepath string, t *testing.T) *sql.DB {
 	ctx := context.Background()
 
-	c, err := postgres.Run(ctx,
-		"docker.io/postgres:14.11-bookworm",
+	c, err := postgres.RunContainer(ctx,
+		testcontainers.WithImage("docker.io/postgres:14.11-bookworm"),
 		postgres.WithDatabase("testdb"),
 		postgres.WithUsername("user"),
 		postgres.WithPassword("password"),

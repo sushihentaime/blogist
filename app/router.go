@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expvar"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -31,5 +32,8 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPut, "/api/v1/blogs/update/:id", app.requirePermission(app.updateBlogHandler, userservice.PermissionWriteBlog))
 	router.HandlerFunc(http.MethodDelete, "/api/v1/blogs/delete/:id", app.requirePermission(app.deleteBlogHandler, userservice.PermissionWriteBlog))
 
-	return app.recoverPanic(app.enableCORS(app.rateLimit(app.logRequest(app.authenticate(router)))))
+	// Add a metrics handler
+	router.HandlerFunc(http.MethodGet, "/metrics", expvar.Handler().ServeHTTP)
+
+	return app.metrics(app.recoverPanic(app.enableCORS(app.rateLimit(app.logRequest(app.authenticate(router))))))
 }
