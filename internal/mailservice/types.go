@@ -2,6 +2,8 @@ package mailservice
 
 import (
 	"bytes"
+	"context"
+	"sync"
 
 	"github.com/go-mail/mail/v2"
 
@@ -12,6 +14,8 @@ type MailService struct {
 	mb     common.MessageConsumer
 	m      Mailer
 	logger MailLogger
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type MailLogger interface {
@@ -20,6 +24,7 @@ type MailLogger interface {
 }
 
 type Mail struct {
+	mu     sync.Mutex
 	dialer Dialer
 	parser TemplateParser
 	sender string

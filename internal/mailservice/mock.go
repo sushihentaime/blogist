@@ -2,6 +2,7 @@ package mailservice
 
 import (
 	"bytes"
+	"sync"
 
 	"github.com/go-mail/mail/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -28,15 +29,30 @@ func (d *MockDialer) DialAndSend(m ...*mail.Message) error {
 }
 
 type MockMailer struct {
+	mu     sync.Mutex
 	Called bool
 	Email  string
 	mock.Mock
 }
 
 func (m *MockMailer) send(recipient string, data any, templateFile string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.Called = true
 	m.Email = recipient
 	return nil
+}
+
+func (m *MockMailer) IsCalled() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Called
+}
+
+func (m *MockMailer) GetEmail() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Email
 }
 
 type MockMessageConsumer struct {

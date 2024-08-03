@@ -19,6 +19,8 @@ func NewMailer(host string, port int, username, password, sender string, tp *Tem
 }
 
 func (m *Mail) send(recipient string, data any, templateFile string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	subject, plainBody, htmlBody, err := m.parser.ParseTemplate(templateFile, data)
 	if err != nil {
 		return err
