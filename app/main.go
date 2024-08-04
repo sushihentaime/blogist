@@ -1,11 +1,9 @@
 package main
 
 import (
-	"expvar"
 	"fmt"
 	"log/slog"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/sushihentaime/blogist/internal/blogservice"
@@ -41,12 +39,6 @@ func main() {
 		cfg.RateLimitEnabled = true
 	}
 
-	expvar.NewString("version").Set(cfg.Version)
-
-	expvar.Publish("goroutines", expvar.Func(func() any {
-		return runtime.NumGoroutine()
-	}))
-
 	// Initialize the database
 	db, err := common.NewDB(cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, 10, 5, 15*time.Minute)
 	if err != nil {
@@ -54,14 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 	defer common.CloseDB(db)
-
-	expvar.Publish("database", expvar.Func(func() any {
-		return db.Stats()
-	}))
-
-	expvar.Publish("timestamp", expvar.Func(func() any {
-		return time.Now().Unix()
-	}))
 
 	// Initialize the message broker
 	// Create the URI and connect to the message broker

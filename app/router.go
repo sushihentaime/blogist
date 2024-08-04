@@ -35,5 +35,5 @@ func (app *application) routes() http.Handler {
 	// Add a metrics handler
 	router.HandlerFunc(http.MethodGet, "/metrics", expvar.Handler().ServeHTTP)
 
-	return app.metrics(app.recoverPanic(app.enableCORS(app.rateLimit(app.logRequest(app.authenticate(router))))))
+	return app.recoverPanic(app.enableCORS(app.rateLimit(app.logRequest(app.authenticate(router)))))
 }

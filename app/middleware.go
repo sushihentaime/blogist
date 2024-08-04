@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"expvar"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -205,34 +204,34 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 	})
 }
 
-func (app *application) metrics(next http.Handler) http.Handler {
-	var (
-		totalRequestsReceived *expvar.Int
-		totalResponsesSent    *expvar.Int
-		totalProcessingTime   *expvar.Int
-	)
+// func (app *application) metrics(next http.Handler) http.Handler {
+// 	var (
+// 		totalRequestsReceived *expvar.Int
+// 		totalResponsesSent    *expvar.Int
+// 		totalProcessingTime   *expvar.Int
+// 	)
 
-	if !app.config.MetricsEnabled {
-		return next
-	}
+// 	if !app.config.MetricsEnabled {
+// 		return next
+// 	}
 
-	totalRequestsReceived = expvar.NewInt("total_requests_received")
-	totalResponsesSent = expvar.NewInt("total_responses_sent")
-	totalProcessingTime = expvar.NewInt("total_processing_time")
+// 	totalRequestsReceived = expvar.NewInt("total_requests_received")
+// 	totalResponsesSent = expvar.NewInt("total_responses_sent")
+// 	totalProcessingTime = expvar.NewInt("total_processing_time")
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !app.config.MetricsEnabled {
-			next.ServeHTTP(w, r)
-			return
-		}
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		if !app.config.MetricsEnabled {
+// 			next.ServeHTTP(w, r)
+// 			return
+// 		}
 
-		start := time.Now()
-		totalRequestsReceived.Add(1)
+// 		start := time.Now()
+// 		totalRequestsReceived.Add(1)
 
-		next.ServeHTTP(w, r)
-		totalResponsesSent.Add(1)
+// 		next.ServeHTTP(w, r)
+// 		totalResponsesSent.Add(1)
 
-		duration := time.Since(start).Microseconds()
-		totalProcessingTime.Add(duration)
-	})
-}
+// 		duration := time.Since(start).Microseconds()
+// 		totalProcessingTime.Add(duration)
+// 	})
+// }

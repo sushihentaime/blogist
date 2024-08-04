@@ -73,7 +73,7 @@ func (s *MailService) SendActivationEmail() {
 
 				if attempt == maxRetries {
 					s.logger.Error("could not send activation email", slog.String("email", data.Email))
-					msg.Nack(false, true)
+					msg.Ack(false)
 				}
 
 			case <-s.ctx.Done():
