@@ -14,7 +14,7 @@ Problem to resolved
 12. Add log analytics for this app
 13. Adjustment to the updated_at date (Done)
 14. Add caching layer for user service (Done)
-15. Add nginx or caddy as a reverse proxy in front?
+15. Add nginx or caddy as a reverse proxy in front? (Done)
 16. Add a healthcheck endpoint (Done)
 17. Add docker mailserver for self hosting mail server
 18. Add rate limiting (Done)
@@ -30,6 +30,7 @@ Problem to resolved
 28. Add metrics middleware (Done)
 29. Test the updated_at of blogs
 30. Rewrite the realip package
+31. Resolve race condition (Done)
 
 Additional Features
 

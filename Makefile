@@ -9,16 +9,16 @@ migrate-init:
 test:
 	@go test -v ./... -cover  
 
-.PHONY: docbuild
-docbuild:
+.PHONY: build
+build:
 	@docker compose build
 
-.PHONY: docup
-docup:
+.PHONY: up
+up:
 	@docker compose up
 
-.PHONY: docdown
-docdown:
+.PHONY: down
+down:
 	@docker compose down
 
 # Quality Control

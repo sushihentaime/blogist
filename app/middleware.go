@@ -31,15 +31,15 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
-			ip     = r.RemoteAddr
+			ip     = realip.FromRequest(r)
 			method = r.Method
 			proto  = r.Proto
 			uri    = r.URL.RequestURI()
 		)
 
-		app.logger.Info("request from", slog.String("method", method), slog.String("uri", uri), slog.String("remote_addr", ip), slog.String("proto", proto))
-
+		startTime := time.Now()
 		next.ServeHTTP(w, r)
+		app.logger.Info("request from", slog.String("method", method), slog.String("uri", uri), slog.String("remote_addr", ip), slog.String("proto", proto), slog.Duration("duration", time.Since(startTime)))
 	})
 }
 
