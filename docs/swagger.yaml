@@ -1,0 +1,377 @@
+basePath: /api/v1
+definitions:
+  blogservice.Blog:
+    properties:
+      content:
+        description: Content is stored in Markdown format.
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/userservice.User'
+      user_id:
+        type: integer
+      version:
+        type: integer
+    type: object
+  main.AllBlogsResponse:
+    properties:
+      blogs:
+        items:
+          $ref: '#/definitions/blogservice.Blog'
+        type: array
+    type: object
+  main.AuthTokenResponse:
+    properties:
+      token:
+        properties:
+          access_token:
+            type: string
+          access_token_expiry:
+            type: string
+          refresh_token:
+            type: string
+          refresh_token_expiry:
+            type: string
+          user_id:
+            type: integer
+        type: object
+    type: object
+  main.BlogResponse:
+    properties:
+      blog:
+        $ref: '#/definitions/blogservice.Blog'
+    type: object
+  main.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  main.TokenResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  main.activateUserRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  main.createBlogRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+  main.loginUserRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  main.registerUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  main.updateBlogRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+  userservice.Permission:
+    enum:
+    - blog:write
+    type: string
+    x-enum-varnames:
+    - PermissionWriteBlog
+  userservice.User:
+    properties:
+      activated:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      permissions:
+        items:
+          $ref: '#/definitions/userservice.Permission'
+        type: array
+      updated_at:
+        type: string
+      username:
+        type: string
+      version:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a blog service API for managing users and blog posts.
+  license:
+    name: MIT License
+    url: http://opensource.org/licenses/MIT
+  title: Blog API
+  version: "1.0"
+paths:
+  /blogs:
+    get:
+      description: Retrieve a paginated list of all blog posts
+      parameters:
+      - description: The number of blogs to return
+        in: query
+        name: limit
+        type: integer
+      - description: The number of blogs to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of blog posts
+          schema:
+            $ref: '#/definitions/main.AllBlogsResponse'
+      summary: Get all blogs
+      tags:
+      - Blogs
+  /blogs/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new blog with a title and content, authenticated by a
+        logged-in user
+      parameters:
+      - description: Blog creation details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.createBlogRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Blog created
+          schema:
+            $ref: '#/definitions/main.BlogResponse'
+      security:
+      - Bearer: []
+      summary: Create a new blog
+      tags:
+      - Blogs
+  /blogs/delete/{id}:
+    delete:
+      description: Delete a blog post by its ID, authenticated by the blog's author.
+        Only the author can delete their own blog.
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses: {}
+      security:
+      - Bearer: []
+      summary: Delete a blog
+      tags:
+      - Blogs
+  /blogs/search:
+    get:
+      description: Retrieve a paginated list of blog posts that match the given title
+        query.
+      parameters:
+      - description: The title query to search for
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: The number of blogs to return
+        in: query
+        name: limit
+        type: integer
+      - description: The number of blogs to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of blog posts
+          schema:
+            $ref: '#/definitions/main.AllBlogsResponse'
+      summary: Search for blogs by title
+      tags:
+      - Blogs
+  /blogs/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing blog post by its ID, authenticated by the blog's
+        author. Only the author can update their own blog.
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Blog update details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.updateBlogRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog updated
+          schema:
+            $ref: '#/definitions/main.MessageResponse'
+      security:
+      - Bearer: []
+      summary: Update an existing blog
+      tags:
+      - Blogs
+  /blogs/user/{userid}:
+    get:
+      description: Get a list of blog posts authored by a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: userid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of blog posts
+          schema:
+            $ref: '#/definitions/main.AllBlogsResponse'
+      summary: Retrieve blogs by user ID
+      tags:
+      - Blogs
+  /blogs/view/{id}:
+    get:
+      description: Retrieve a specific blog post by its ID
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog post
+          schema:
+            $ref: '#/definitions/main.BlogResponse'
+      summary: Get a blog by ID
+      tags:
+      - Blogs
+  /users/activate:
+    put:
+      consumes:
+      - application/json
+      description: Activate a user account using the provided token
+      parameters:
+      - description: User activation details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.activateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User account activated
+          schema:
+            $ref: '#/definitions/main.MessageResponse'
+      summary: Activate a user account
+      tags:
+      - Users
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Log in a user using their username and password
+      parameters:
+      - description: User login details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.loginUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in user
+          schema:
+            $ref: '#/definitions/main.AuthTokenResponse'
+      summary: Log in a user
+      tags:
+      - Users
+  /users/logout:
+    delete:
+      description: Log out a user by invalidating their access token
+      responses:
+        "200":
+          description: User logged out
+          schema:
+            $ref: '#/definitions/main.MessageResponse'
+      security:
+      - Bearer: []
+      summary: Log out a user
+      tags:
+      - Users
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with a username, email, and password
+      parameters:
+      - description: User registration details
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.registerUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully registered user
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
+      summary: Register a new user
+      tags:
+      - Users
+securityDefinitions:
+  Bearer:
+    description: Type "Bearer" followed by a space and the token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/sushihentaime/blogist/internal/common"
 )
@@ -176,53 +175,49 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 		return nil, err
 	}
 
+	// if the token is not nill delete the token and create a new one
 	if dbToken != nil {
-		// Check if the token expiry is still valid
-		if dbToken.AccessTokenExpiry.After(time.Now()) && dbToken.RefreshTokenExpiry.After(time.Now()) {
-			return dbToken, nil
-		} else {
-			tx, err := s.m.db.BeginTx(ctx, nil)
-			if err != nil {
-				return nil, err
-			}
-
-			// delete the token
-			err = s.m.deleteAuthToken(tx, user.ID)
-			if err != nil {
-				_ = tx.Rollback()
-				return nil, err
-			}
-
-			authToken, err := s.m.createAuthToken(tx, user.ID)
-			if err != nil {
-				_ = tx.Rollback()
-				return nil, err
-			}
-
-			if err := tx.Commit(); err != nil {
-				return nil, err
-			}
-
-			return authToken, nil
+		tx, err := s.m.db.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	tx, err := s.m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
+		// delete the token
+		err = s.m.deleteAuthToken(tx, user.ID)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 
-	authToken, err := s.m.createAuthToken(tx, user.ID)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
+		authToken, err := s.m.createAuthToken(tx, user.ID)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
 
-	return authToken, nil
+		return authToken, nil
+	} else {
+		tx, err := s.m.db.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		authToken, err := s.m.createAuthToken(tx, user.ID)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+
+		return authToken, nil
+	}
 }
 
 func (s *UserService) getUserByAccessToken(token string) (*User, error) {

@@ -32,10 +32,6 @@ type Config struct {
 	RateLimitBurst   int  `mapstructure:"RATE_LIMIT_BURST"`
 	RateLimitEnabled bool `mapstructure:"RATE_LIMIT_ENABLED"`
 
-	// Certificate and Key files for TLS
-	TLSCertFile string `mapstructure:"TLS_CERT_FILE"`
-	TLSKeyFile  string `mapstructure:"TLS_KEY_FILE"`
-
 	// Metrics Configuration
 	MetricsEnabled bool `mapstructure:"METRICS_ENABLED"`
 }

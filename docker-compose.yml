@@ -33,7 +33,7 @@ services:
     volumes:
       - ./migrations:/migrations
     command:
-      ["-path", "/migrations", "-database", "postgres://postgres:password@db:5432/blogist?sslmode=disable", "up"]
+      ["-path", "/migrations", "-database", "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST/$POSTGRES_DB?sslmode=disable", "up"]
     depends_on:
       db:
         condition: service_healthy

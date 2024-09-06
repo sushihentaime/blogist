@@ -15,7 +15,7 @@ build:
 
 .PHONY: up
 up:
-	@docker compose up
+	@docker compose up --build
 
 .PHONY: down
 down:
@@ -40,3 +40,8 @@ vendor:
 	@go mod tidy
 	@go mod verify
 	@go mod vendor
+
+.PHONY: swagger
+swagger:
+	@go install github.com/swaggo/swag/cmd/swag@latest
+	@swag init -g app/main.go

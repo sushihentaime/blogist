@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/sushihentaime/blogist/internal/blogservice"
 	"github.com/sushihentaime/blogist/internal/common"
@@ -15,17 +16,27 @@ type registerUserRequest struct {
 	Password string `json:"password"`
 }
 
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
+// @Summary Register a new user
+// @Description Register a new user with a username, email, and password
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param input body registerUserRequest true "User registration details"
+// @Success 201 {object} TokenResponse "Successfully registered user"
+// @Router /users/register [post]
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input registerUserRequest
 
-	// Parse the request body
 	err := app.parseJSON(w, r, &input)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return
 	}
 
-	// Call the user service
 	token, err := app.userService.CreateUser(r.Context(), input.Username, input.Email, input.Password)
 	if err != nil {
 		switch {
@@ -42,7 +53,6 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Return the response
 	err = app.writeJSON(w, http.StatusCreated, envelope{"token": token}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -54,18 +64,28 @@ type activateUserRequest struct {
 	Token string `json:"token"`
 }
 
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+// @Summary Activate a user account
+// @Description Activate a user account using the provided token
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param input body activateUserRequest true "User activation details"
+// @Success 200 {object} MessageResponse "User account activated"
+// @Router /users/activate [put]
 // ! how to test this with the rabbitmq broker?
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input activateUserRequest
 
-	// Parse the request body
 	err := app.parseJSON(w, r, &input)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return
 	}
 
-	// Call the user service
 	err = app.userService.ActivateUser(r.Context(), input.Token)
 	if err != nil {
 		switch {
@@ -92,17 +112,33 @@ type loginUserRequest struct {
 	Password string `json:"password"`
 }
 
+type AuthTokenResponse struct {
+	Token struct {
+		AccessToken        string    `json:"access_token"`
+		RefreshToken       string    `json:"refresh_token"`
+		UserID             int       `json:"user_id"`
+		AccessTokenExpiry  time.Time `json:"access_token_expiry"`
+		RefreshTokenExpiry time.Time `json:"refresh_token_expiry"`
+	} `json:"token"`
+}
+
+// @Summary Log in a user
+// @Description Log in a user using their username and password
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param input body loginUserRequest true "User login details"
+// @Success 200 {object} AuthTokenResponse "Successfully logged in user"
+// @Router /users/login [post]
 func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input loginUserRequest
 
-	// Parse the request body
 	err := app.parseJSON(w, r, &input)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return
 	}
 
-	// Call the user service
 	token, err := app.userService.LoginUser(r.Context(), input.Username, input.Password)
 	if err != nil {
 		switch {
@@ -126,11 +162,15 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// @Summary Log out a user
+// @Description Log out a user by invalidating their access token
+// @Tags Users
+// @Security Bearer
+// @Success 200 {object} MessageResponse "User logged out"
+// @Router /users/logout [delete]
 func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
-	// Get the user from the context
 	user := app.getUserContext(r)
 
-	// Call the user service
 	err := app.userService.LogoutUser(r.Context(), user.ID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -149,17 +189,24 @@ type createBlogRequest struct {
 	Content string `json:"content"`
 }
 
+// @Summary Create a new blog
+// @Description Create a new blog with a title and content, authenticated by a logged-in user
+// @Tags Blogs
+// @Security Bearer
+// @Accept json
+// @Produce json
+// @Param input body createBlogRequest true "Blog creation details"
+// @Success 201 {object} BlogResponse "Blog created"
+// @Router /blogs/create [post]
 func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request) {
 	var input createBlogRequest
 
-	// Parse the request body
 	err := app.parseJSON(w, r, &input)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return
 	}
 
-	// get the user from the context
 	user := app.getUserContext(r)
 
 	req := &blogservice.CreateBlogRequest{
@@ -168,8 +215,7 @@ func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request
 		UserID:  user.ID,
 	}
 
-	// Call the blog service
-	err = app.blogService.CreateBlog(r.Context(), req)
+	blog, err := app.blogService.CreateBlog(r.Context(), req)
 	if err != nil {
 		switch {
 		case errors.As(err, &common.ValidationError{}):
@@ -183,13 +229,24 @@ func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusCreated, envelope{"message": "blog created"}, nil)
+	err = app.writeJSON(w, http.StatusCreated, envelope{"blog": blog}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 }
 
+type BlogResponse struct {
+	Blog blogservice.Blog `json:"blog"`
+}
+
+// @Summary Get a blog by ID
+// @Description Retrieve a specific blog post by its ID
+// @Tags Blogs
+// @Param id path int true "Blog ID"
+// @Produce json
+// @Success 200 {object} BlogResponse "Blog post"
+// @Router /blogs/view/{id} [get]
 func (app *application) getBlogHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r, "id")
 	if err != nil {
@@ -223,17 +280,25 @@ type updateBlogRequest struct {
 	Content string `json:"content"`
 }
 
+// @Summary Update an existing blog
+// @Description Update an existing blog post by its ID, authenticated by the blog's author. Only the author can update their own blog.
+// @Tags Blogs
+// @Security Bearer
+// @Accept json
+// @Produce json
+// @Param id path int true "Blog ID"
+// @Param input body updateBlogRequest true "Blog update details"
+// @Success 200 {object} MessageResponse "Blog updated"
+// @Router /blogs/update/{id} [put]
 func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request) {
 	var input updateBlogRequest
 
-	// id is a URL parameter
 	id, err := app.readIDParam(r, "id")
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
 		return
 	}
 
-	// Parse the request body
 	err = app.parseJSON(w, r, &input)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
@@ -242,7 +307,6 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 
 	user := app.getUserContext(r)
 
-	// get the blog from the database
 	dbBlog, err := app.blogService.GetBlogByID(r.Context(), id)
 	if err != nil {
 		switch {
@@ -259,7 +323,6 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Call the blog service
 	err = app.blogService.UpdateBlog(r.Context(), input.Title, input.Content, &dbBlog.ID, &user.ID, &dbBlog.Version)
 	if err != nil {
 		switch {
@@ -281,6 +344,12 @@ func (app *application) updateBlogHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// @Summary Delete a blog
+// @Description Delete a blog post by its ID, authenticated by the blog's author. Only the author can delete their own blog.
+// @Tags Blogs
+// @Security Bearer
+// @Param id path int true "Blog ID"
+// @Router /blogs/delete/{id} [delete]
 func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r, "id")
 	if err != nil {
@@ -306,7 +375,6 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Call the blog service
 	err = app.blogService.DeleteBlog(r.Context(), id, user.ID)
 	if err != nil {
 		switch {
@@ -325,6 +393,18 @@ func (app *application) deleteBlogHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+type AllBlogsResponse struct {
+	Blogs []blogservice.Blog `json:"blogs"`
+}
+
+// @Summary Get all blogs
+// @Description Retrieve a paginated list of all blog posts
+// @Tags Blogs
+// @Param limit query int false "The number of blogs to return"
+// @Param offset query int false "The number of blogs to skip"
+// @Produce json
+// @Success 200 {object} AllBlogsResponse "List of blog posts"
+// @Router /blogs [get]
 func (app *application) getAllBlogsHandler(w http.ResponseWriter, r *http.Request) {
 	// get the limit and offset query parameters
 	limit, offset, err := app.readLimitOffsetParams(r)
@@ -346,6 +426,15 @@ func (app *application) getAllBlogsHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// @Summary Search for blogs by title
+// @Description Retrieve a paginated list of blog posts that match the given title query.
+// @Tags Blogs
+// @Produce json
+// @Param q query string true "The title query to search for"
+// @Param limit query int false "The number of blogs to return"
+// @Param offset query int false "The number of blogs to skip"
+// @Success 200 {object} AllBlogsResponse "List of blog posts"
+// @Router /blogs/search [get]
 func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Request) {
 	title, err := app.readStringParam(r, "q")
 	if err != nil {
@@ -353,7 +442,6 @@ func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// get the limit and offset query parameters
 	limit, offset, err := app.readLimitOffsetParams(r)
 	if err != nil {
 		app.badRequestErrorResponse(w, r, err)
@@ -379,6 +467,13 @@ func (app *application) searchBlogsHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// @Summary Retrieve blogs by user ID
+// @Description Get a list of blog posts authored by a specific user
+// @Tags Blogs
+// @Param userid path int true "User ID"
+// @Produce json
+// @Success 200 {object} AllBlogsResponse "List of blog posts"
+// @Router /blogs/user/{userid} [get]
 func (app *application) getBlogsByUserIdHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r, "userid")
 	if err != nil {

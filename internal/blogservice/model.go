@@ -31,25 +31,31 @@ func ForeignKeyError(err error, name string) bool {
 	return false
 }
 
-func (m *BlogModel) insert(title, content string, id int) error {
+func (m *BlogModel) insert(title, content string, id int) (*Blog, error) {
 	query := `
 		INSERT INTO blogs (title, content, user_id)
-		VALUES ($1, $2, $3)`
+		VALUES ($1, $2, $3) RETURNING id, created_at, updated_at, version`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := m.db.ExecContext(ctx, query, title, content, id)
+	var blog Blog
+
+	blog.Title = title
+	blog.Content = content
+	blog.UserID = id
+
+	err := m.db.QueryRowContext(ctx, query, title, content, id).Scan(&blog.ID, &blog.CreatedAt, &blog.UpdatedAt, &blog.Version)
 	if err != nil {
 		switch {
 		case ForeignKeyError(err, "blogs_user_id_fkey"):
-			return ErrUserForeignKey
+			return nil, ErrUserForeignKey
 		default:
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &blog, nil
 }
 
 // getBlogById is a method to get a blog by its ID joining the users table to get the user's name.

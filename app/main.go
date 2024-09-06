@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/sushihentaime/blogist/docs"
 	"github.com/sushihentaime/blogist/internal/blogservice"
 	"github.com/sushihentaime/blogist/internal/common"
 	"github.com/sushihentaime/blogist/internal/mailservice"
@@ -22,6 +23,19 @@ type application struct {
 	broker      *common.MessageBroker
 }
 
+// @title Blog API
+// @version 1.0
+// @description This is a blog service API for managing users and blog posts.
+
+// @license.name MIT License
+// @license.url http://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and the token
 func main() {
 	// Initialize the logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

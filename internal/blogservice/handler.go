@@ -19,13 +19,13 @@ type CreateBlogRequest struct {
 }
 
 // CreateBlog creates a new blog post. The user ID must be provided.
-func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) error {
+func (s *BlogService) CreateBlog(ctx context.Context, req *CreateBlogRequest) (*Blog, error) {
 	v := common.NewValidator()
 	validateTitle(v, req.Title)
 	validateContent(v, req.Content)
 	validateInt(v, req.UserID, "user_id")
 	if !v.Valid() {
-		return v.ValidationError()
+		return nil, v.ValidationError()
 	}
 
 	content := sanitizeMarkdown(req.Content)

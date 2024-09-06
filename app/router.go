@@ -6,6 +6,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/sushihentaime/blogist/internal/userservice"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func (app *application) routes() http.Handler {
@@ -13,6 +14,8 @@ func (app *application) routes() http.Handler {
 
 	router.NotFound = http.HandlerFunc(app.notFoundErrorResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedErrorResponse)
+
+	router.HandlerFunc(http.MethodGet, "/swagger/*any", httpSwagger.WrapHandler.ServeHTTP)
 
 	// health check
 	router.HandlerFunc(http.MethodGet, "/health", app.healthCheckHandler)
@@ -33,7 +36,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/api/v1/blogs/delete/:id", app.requirePermission(app.deleteBlogHandler, userservice.PermissionWriteBlog))
 
 	// Add a metrics handler
-	router.HandlerFunc(http.MethodGet, "/metrics", expvar.Handler().ServeHTTP)
+	router.HandlerFunc(http.MethodGet, "/debugs/vars", expvar.Handler().ServeHTTP)
 
 	return app.recoverPanic(app.enableCORS(app.rateLimit(app.logRequest(app.authenticate(router)))))
 }

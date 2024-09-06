@@ -138,7 +138,7 @@ func TestCreateBlog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			err := s.CreateBlog(ctx, tc.blog)
+			_, err := s.CreateBlog(ctx, tc.blog)
 			assert.Equal(t, tc.expectedErr, err)
 
 			if err == nil {

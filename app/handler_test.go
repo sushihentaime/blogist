@@ -357,7 +357,6 @@ func TestCreateBlogHandler(t *testing.T) {
 			},
 			setup:      createTestUser,
 			wantStatus: http.StatusCreated,
-			wantBody:   envelope{"message": "blog created"},
 		},
 		{
 			name: "Invalid Title",
