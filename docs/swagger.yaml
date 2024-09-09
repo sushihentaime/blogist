@@ -20,6 +20,13 @@ definitions:
       version:
         type: integer
     type: object
+  likeservice.LikedUser:
+    properties:
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
   main.AllBlogsResponse:
     properties:
       blogs:
@@ -47,6 +54,12 @@ definitions:
     properties:
       blog:
         $ref: '#/definitions/blogservice.Blog'
+      like_count:
+        type: integer
+      liked_by:
+        items:
+          $ref: '#/definitions/likeservice.LikedUser'
+        type: array
     type: object
   main.MessageResponse:
     properties:
@@ -193,6 +206,27 @@ paths:
       summary: Delete a blog
       tags:
       - Blogs
+  /blogs/like/{id}:
+    post:
+      description: Like a blog post by its ID, authenticated by a logged-in user
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Blog liked
+          schema:
+            $ref: '#/definitions/main.MessageResponse'
+      security:
+      - Bearer: []
+      summary: Like a blog post
+      tags:
+      - Blogs
   /blogs/search:
     get:
       description: Retrieve a paginated list of blog posts that match the given title
@@ -219,6 +253,27 @@ paths:
           schema:
             $ref: '#/definitions/main.AllBlogsResponse'
       summary: Search for blogs by title
+      tags:
+      - Blogs
+  /blogs/unlike/{id}:
+    put:
+      description: Unlike a blog post by its ID, authenticated by a logged-in user
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog unliked successfully
+          schema:
+            $ref: '#/definitions/main.MessageResponse'
+      security:
+      - Bearer: []
+      summary: Unlike a blog post
       tags:
       - Blogs
   /blogs/update/{id}:
@@ -335,7 +390,11 @@ paths:
       - Users
   /users/logout:
     delete:
+      consumes:
+      - application/json
       description: Log out a user by invalidating their access token
+      produces:
+      - application/json
       responses:
         "200":
           description: User logged out

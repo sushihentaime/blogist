@@ -36,25 +36,25 @@ func newToken(userID int, ttl time.Duration, scope tokenScope) (*Token, error) {
 	return token, nil
 }
 
-func (m *DBModel) insertToken(token *Token) error {
+func (m *DBModel) insertToken(ctx context.Context, token *Token) error {
 	query := `
 		INSERT INTO tokens (hash, user_id, expiry, scope_id)
 		VALUES ($1, $2, $3, (SELECT id FROM token_scopes WHERE name = $4))`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := m.db.ExecContext(ctx, query, token.Hash, token.UserID, token.Expiry, string(token.Scope))
+	_, err := m.db.ExecContext(dbCtx, query, token.Hash, token.UserID, token.Expiry, string(token.Scope))
 	return err
 }
 
-func (m *DBModel) createToken(userID int, ttl time.Duration, scope tokenScope) (*Token, error) {
+func (m *DBModel) createToken(ctx context.Context, userID int, ttl time.Duration, scope tokenScope) (*Token, error) {
 	token, err := newToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
 	}
 
-	err = m.insertToken(token)
+	err = m.insertToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (m *DBModel) createToken(userID int, ttl time.Duration, scope tokenScope) (
 	return token, nil
 }
 
-func (m *DBModel) getUser(tokenScope tokenScope, token []byte) (*User, error) {
+func (m *DBModel) getUser(ctx context.Context, tokenScope tokenScope, token []byte) (*User, error) {
 	var user User
 
 	query := `
@@ -72,10 +72,10 @@ func (m *DBModel) getUser(tokenScope tokenScope, token []byte) (*User, error) {
 		INNER JOIN token_scopes s ON t.scope_id = s.id
 		WHERE t.hash = $1 AND s.name = $2 AND t.expiry > $3`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := m.db.QueryRowContext(ctx, query, token, tokenScope, time.Now()).Scan(&user.ID, &user.Username, &user.Email, &user.Activated, &user.Version)
+	err := m.db.QueryRowContext(dbCtx, query, token, tokenScope, time.Now()).Scan(&user.ID, &user.Username, &user.Email, &user.Activated, &user.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -88,15 +88,15 @@ func (m *DBModel) getUser(tokenScope tokenScope, token []byte) (*User, error) {
 	return &user, nil
 }
 
-func (m *DBModel) deleteToken(tx *sql.Tx, userID int, scope tokenScope) error {
+func (m *DBModel) deleteToken(ctx context.Context, tx *sql.Tx, userID int, scope tokenScope) error {
 	query := `
 		DELETE FROM tokens
 		WHERE user_id = $1 AND scope_id = (SELECT id FROM token_scopes WHERE name = $2)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	res, err := tx.ExecContext(ctx, query, userID, string(scope))
+	res, err := tx.ExecContext(dbCtx, query, userID, string(scope))
 	if err != nil {
 		return err
 	}
@@ -145,13 +145,13 @@ func newAuthToken(userID int, accessTokenTTL time.Duration, refreshTokenTTL time
 	return token, nil
 }
 
-func (m *DBModel) createAuthToken(tx *sql.Tx, userID int) (*AuthToken, error) {
+func (m *DBModel) createAuthToken(ctx context.Context, tx *sql.Tx, userID int) (*AuthToken, error) {
 	authToken, err := newAuthToken(userID, AccessTokenTime, RefreshTokenTime)
 	if err != nil {
 		return nil, err
 	}
 
-	err = m.insertAuthToken(tx, authToken)
+	err = m.insertAuthToken(ctx, tx, authToken)
 	if err != nil {
 		return nil, err
 	}
@@ -159,19 +159,19 @@ func (m *DBModel) createAuthToken(tx *sql.Tx, userID int) (*AuthToken, error) {
 	return authToken, nil
 }
 
-func (m *DBModel) insertAuthToken(tx *sql.Tx, authToken *AuthToken) error {
+func (m *DBModel) insertAuthToken(ctx context.Context, tx *sql.Tx, authToken *AuthToken) error {
 	query := `
 		INSERT INTO auth_tokens (access_token, refresh_token, user_id, access_token_expiry, refresh_token_expiry)
 		VALUES ($1, $2, $3, $4, $5)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := tx.ExecContext(ctx, query, authToken.AccessTokenHash, authToken.RefreshTokenHash, authToken.UserID, authToken.AccessTokenExpiry, authToken.RefreshTokenExpiry)
+	_, err := tx.ExecContext(dbCtx, query, authToken.AccessTokenHash, authToken.RefreshTokenHash, authToken.UserID, authToken.AccessTokenExpiry, authToken.RefreshTokenExpiry)
 	return err
 }
 
-func (m *DBModel) getAuthToken(userid int) (*AuthToken, error) {
+func (m *DBModel) getAuthToken(ctx context.Context, userid int) (*AuthToken, error) {
 	var authToken AuthToken
 
 	query := `
@@ -179,10 +179,10 @@ func (m *DBModel) getAuthToken(userid int) (*AuthToken, error) {
 		FROM auth_tokens
 		WHERE user_id = $1`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := m.db.QueryRowContext(ctx, query, userid).Scan(&authToken.AccessTokenHash, &authToken.RefreshTokenHash, &authToken.UserID, &authToken.AccessTokenExpiry, &authToken.RefreshTokenExpiry)
+	err := m.db.QueryRowContext(dbCtx, query, userid).Scan(&authToken.AccessTokenHash, &authToken.RefreshTokenHash, &authToken.UserID, &authToken.AccessTokenExpiry, &authToken.RefreshTokenExpiry)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -195,15 +195,15 @@ func (m *DBModel) getAuthToken(userid int) (*AuthToken, error) {
 	return &authToken, nil
 }
 
-func (m *DBModel) deleteAuthToken(tx *sql.Tx, userID int) error {
+func (m *DBModel) deleteAuthToken(ctx context.Context, tx *sql.Tx, userID int) error {
 	query := `
 		DELETE FROM auth_tokens
 		WHERE user_id = $1`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	res, err := tx.ExecContext(ctx, query, userID)
+	res, err := tx.ExecContext(dbCtx, query, userID)
 	if err != nil {
 		return err
 	}

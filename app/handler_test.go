@@ -414,7 +414,7 @@ func TestCreateBlogHandler(t *testing.T) {
 	}
 }
 
-func createTestBlog(app *application, db *sql.DB) (*string, *int, *int, error) {
+func createTestBlog(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
 	authToken, userId, err := createTestUser(app, db, &userservice.User{Username: "testuser", Email: "testuser@example.com"})
 	if err != nil {
 		return nil, nil, nil, err
@@ -426,7 +426,31 @@ func createTestBlog(app *application, db *sql.DB) (*string, *int, *int, error) {
 		return nil, nil, nil, err
 	}
 
+	if withLikes {
+		err = createRandomLikesToBlog(app, db, blogId)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
 	return authToken, userId, &blogId, nil
+}
+
+func createRandomLikesToBlog(app *application, db *sql.DB, blogId int) error {
+	// add 10 random users that will like the blog
+	for i := 1; i < 10; i++ {
+		_, userId, err := createTestUser(app, db, &userservice.User{Username: fmt.Sprintf("testuser%d", i), Email: fmt.Sprintf("testuser%d@example.com", i)})
+		if err != nil {
+			return err
+		}
+
+		_, err = db.Exec("INSERT INTO likes (user_id, blog_id) VALUES ($1, $2)", *userId, blogId)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func TestGetBlogHandler(t *testing.T) {
@@ -436,7 +460,7 @@ func TestGetBlogHandler(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		wantStatus int
 		wantBody   envelope
 	}{
@@ -447,16 +471,16 @@ func TestGetBlogHandler(t *testing.T) {
 		},
 		{
 			name: "No Authentication Token",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Invalid Blog ID",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				token, userId, _, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				token, userId, _, err := createTestBlog(app, db, withLikes)
 				return token, userId, intptr(10), err
 			},
 			wantStatus: http.StatusNotFound,
@@ -466,7 +490,7 @@ func TestGetBlogHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, _, blogId, err := tc.setup(app, db)
+			token, _, blogId, err := tc.setup(app, db, true)
 			assert.NoError(t, err)
 
 			if token == nil {
@@ -491,6 +515,9 @@ func TestGetBlogHandler(t *testing.T) {
 
 				_, err = db.Exec("DELETE FROM users")
 				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM likes")
+				assert.NoError(t, err)
 			})
 		})
 	}
@@ -504,7 +531,7 @@ func TestUpdateBlogHandler(t *testing.T) {
 	testCases := []struct {
 		name       string
 		payload    any
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		wantStatus int
 		wantBody   envelope
 	}{
@@ -544,8 +571,8 @@ func TestUpdateBlogHandler(t *testing.T) {
 				"title":   "Updated Blog",
 				"content": "This is an updated blog",
 			},
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			wantStatus: http.StatusForbidden,
@@ -557,8 +584,8 @@ func TestUpdateBlogHandler(t *testing.T) {
 				"title":   "Updated Blog",
 				"content": "This is an updated blog",
 			},
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				token, userId, _, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				token, userId, _, err := createTestBlog(app, db, withLikes)
 				return token, userId, intptr(10), err
 			},
 			wantStatus: http.StatusNotFound,
@@ -570,8 +597,8 @@ func TestUpdateBlogHandler(t *testing.T) {
 				"title":   "Updated Blog",
 				"content": "This is an updated blog",
 			},
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, _, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, _, blogId, err := createTestBlog(app, db, withLikes)
 				if err != nil {
 					return nil, nil, nil, err
 				}
@@ -590,7 +617,7 @@ func TestUpdateBlogHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, _, blogId, err := tc.setup(app, db)
+			token, _, blogId, err := tc.setup(app, db, false)
 			assert.NoError(t, err)
 
 			status, _, gotBody := ts.put(t, fmt.Sprintf("/api/v1/blogs/update/%d", *blogId), token, tc.payload)
@@ -618,7 +645,7 @@ func TestDeleteBlogHandler(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		wantStatus int
 		wantBody   envelope
 	}{
@@ -630,8 +657,8 @@ func TestDeleteBlogHandler(t *testing.T) {
 		},
 		{
 			name: "No Authentication Token",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			wantStatus: http.StatusForbidden,
@@ -639,8 +666,8 @@ func TestDeleteBlogHandler(t *testing.T) {
 		},
 		{
 			name: "Invalid Blog ID",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				token, userId, _, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				token, userId, _, err := createTestBlog(app, db, withLikes)
 				return token, userId, intptr(10), err
 			},
 			wantStatus: http.StatusNotFound,
@@ -648,8 +675,8 @@ func TestDeleteBlogHandler(t *testing.T) {
 		},
 		{
 			name: "Delete Another User's Blog",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, _, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, _, blogId, err := createTestBlog(app, db, withLikes)
 				if err != nil {
 					return nil, nil, nil, err
 				}
@@ -668,7 +695,7 @@ func TestDeleteBlogHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, _, blogId, err := tc.setup(app, db)
+			token, _, blogId, err := tc.setup(app, db, false)
 			assert.NoError(t, err)
 
 			status, _, gotBody := ts.delete(t, fmt.Sprintf("/api/v1/blogs/delete/%d", *blogId), token)
@@ -696,7 +723,7 @@ func TestGetBlogsByUserIdHandler(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		wantStatus int
 		wantBody   envelope
 	}{
@@ -707,16 +734,16 @@ func TestGetBlogsByUserIdHandler(t *testing.T) {
 		},
 		{
 			name: "No Authentication Token",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Invalid User ID",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				token, _, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				token, _, blogId, err := createTestBlog(app, db, withLikes)
 				return token, intptr(10), blogId, err
 			},
 			wantStatus: http.StatusNotFound,
@@ -726,7 +753,7 @@ func TestGetBlogsByUserIdHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, userId, _, err := tc.setup(app, db)
+			token, userId, _, err := tc.setup(app, db, false)
 			assert.NoError(t, err)
 
 			status, _, gotBody := ts.get(t, fmt.Sprintf("/api/v1/blogs/user/%d", *userId), token, nil)
@@ -755,7 +782,7 @@ func TestGetAllBlogsHandler(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		limit      int
 		offset     int
 		wantStatus int
@@ -770,15 +797,15 @@ func TestGetAllBlogsHandler(t *testing.T) {
 		},
 		{
 			name: "No Authentication Token",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "No Blogs",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
 				token, userId, err := createTestUser(app, db, &userservice.User{Username: "testuser", Email: "testuser@example.com", Activated: true})
 				return token, userId, nil, err
 			},
@@ -788,7 +815,7 @@ func TestGetAllBlogsHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, _, _, err := tc.setup(app, db)
+			token, _, _, err := tc.setup(app, db, false)
 			assert.NoError(t, err)
 
 			status, _, gotBody := ts.get(t, fmt.Sprintf("/api/v1/blogs?limit=%d&offset=%d", tc.limit, tc.offset), token, nil)
@@ -816,7 +843,7 @@ func TestGetBlogsByTitle(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		setup      func(app *application, db *sql.DB) (*string, *int, *int, error)
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
 		title      string
 		limit      int
 		offset     int
@@ -831,8 +858,8 @@ func TestGetBlogsByTitle(t *testing.T) {
 		},
 		{
 			name: "No Authentication Token",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
-				_, userId, blogId, err := createTestBlog(app, db)
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
 				return nil, userId, blogId, err
 			},
 			title:      "Test Blog",
@@ -840,7 +867,7 @@ func TestGetBlogsByTitle(t *testing.T) {
 		},
 		{
 			name: "No Blogs",
-			setup: func(app *application, db *sql.DB) (*string, *int, *int, error) {
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
 				token, userId, err := createTestUser(app, db, &userservice.User{Username: "testuser", Email: "testuser@example.com", Activated: true})
 				return token, userId, nil, err
 			},
@@ -857,7 +884,7 @@ func TestGetBlogsByTitle(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, _, _, err := tc.setup(app, db)
+			token, _, _, err := tc.setup(app, db, false)
 			assert.NoError(t, err)
 
 			title := url.QueryEscape(tc.title)
@@ -885,7 +912,7 @@ func TestConcurrentGetAndUpdate(t *testing.T) {
 
 	ts := newTestServer(t, app.routes())
 
-	token, _, blogId, err := createTestBlog(app, db)
+	token, _, blogId, err := createTestBlog(app, db, false)
 	assert.NoError(t, err)
 
 	var wg sync.WaitGroup
@@ -918,4 +945,167 @@ func TestConcurrentGetAndUpdate(t *testing.T) {
 		_, err = db.Exec("DELETE FROM users")
 		assert.NoError(t, err)
 	})
+}
+
+func TestLikeBlogHandler(t *testing.T) {
+	app, db := newTestApplication(t)
+
+	ts := newTestServer(t, app.routes())
+
+	testCases := []struct {
+		name       string
+		setup      func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error)
+		wantStatus int
+		wantBody   envelope
+	}{
+		{
+			name:       "Valid Request",
+			setup:      createTestBlog,
+			wantStatus: http.StatusCreated,
+			wantBody:   envelope{"message": "Blog liked successfully"},
+		},
+		{
+			name: "No Authentication Token",
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				_, userId, blogId, err := createTestBlog(app, db, withLikes)
+				return nil, userId, blogId, err
+			},
+			wantStatus: http.StatusForbidden,
+			wantBody:   envelope{"error": "invalid or missing authentication token"},
+		},
+		{
+			name: "Invalid Blog ID",
+			setup: func(app *application, db *sql.DB, withLikes bool) (*string, *int, *int, error) {
+				token, userId, _, err := createTestBlog(app, db, withLikes)
+				return token, userId, intptr(10), err
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   envelope{"error": "resource not found"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, _, blogId, err := tc.setup(app, db, false)
+			assert.NoError(t, err)
+
+			status, _, gotBody := ts.post(t, fmt.Sprintf("/api/v1/blogs/like/%d", *blogId), nil, token)
+			assert.Equal(t, tc.wantStatus, status)
+
+			if tc.wantBody != nil {
+				assert.JSONEq(t, tc.wantBody.JSON(), gotBody.JSON())
+			}
+
+			t.Cleanup(func() {
+				_, err := db.Exec("DELETE FROM blogs")
+				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM users")
+				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM likes")
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
+func createLikeOnBlog(app *application, db *sql.DB) (token *string, blogId *int, err error) {
+	token, userId, err := createTestUser(app, db, &userservice.User{Username: "testliker", Email: "testliker@example.com"})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	_, _, blogId, err = createTestBlog(app, db, false)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	_, err = db.Exec("INSERT INTO likes (user_id, blog_id) VALUES ($1, $2)", *userId, *blogId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return token, blogId, nil
+}
+
+func TestUnlikeBlogHandler(t *testing.T) {
+	app, db := newTestApplication(t)
+
+	ts := newTestServer(t, app.routes())
+
+	testCases := []struct {
+		name       string
+		setup      func(app *application, db *sql.DB) (*string, *int, error)
+		wantStatus int
+		wantBody   envelope
+	}{
+		{
+			name:       "Valid Request",
+			setup:      createLikeOnBlog,
+			wantStatus: http.StatusOK,
+			wantBody:   envelope{"message": "Blog unliked successfully"},
+		},
+		{
+			name: "No Authentication Token",
+			setup: func(app *application, db *sql.DB) (*string, *int, error) {
+				_, blogId, err := createLikeOnBlog(app, db)
+				return nil, blogId, err
+			},
+			wantStatus: http.StatusForbidden,
+			wantBody:   envelope{"error": "invalid or missing authentication token"},
+		},
+		{
+			name: "Invalid Blog ID",
+			setup: func(app *application, db *sql.DB) (*string, *int, error) {
+				token, _, err := createLikeOnBlog(app, db)
+				return token, intptr(10), err
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   envelope{"error": "resource not found"},
+		},
+		{
+			name: "Blog Not Liked",
+			setup: func(app *application, db *sql.DB) (*string, *int, error) {
+				token, _, err := createTestUser(app, db, &userservice.User{Username: "testliker", Email: "testliker@example.com"})
+				if err != nil {
+					return nil, nil, err
+				}
+
+				_, _, blogId, err := createTestBlog(app, db, false)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				return token, blogId, nil
+			},
+			wantStatus: http.StatusNotFound,
+			wantBody:   envelope{"error": "resource not found"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, blogId, err := tc.setup(app, db)
+			assert.NoError(t, err)
+
+			status, _, gotBody := ts.put(t, fmt.Sprintf("/api/v1/blogs/unlike/%d", *blogId), token, nil)
+			assert.Equal(t, tc.wantStatus, status)
+
+			if tc.wantBody != nil {
+				assert.JSONEq(t, tc.wantBody.JSON(), gotBody.JSON())
+			}
+
+			t.Cleanup(func() {
+				_, err := db.Exec("DELETE FROM blogs")
+				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM users")
+				assert.NoError(t, err)
+
+				_, err = db.Exec("DELETE FROM likes")
+				assert.NoError(t, err)
+			})
+		})
+	}
 }

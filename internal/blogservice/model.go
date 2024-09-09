@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lib/pq"
 	"github.com/sushihentaime/blogist/internal/common"
 )
 
@@ -19,24 +18,12 @@ func newBlogModel(db *sql.DB) *BlogModel {
 	return &BlogModel{db: db}
 }
 
-// ForeignKeyError is a helper function to check if the error is a foreign key constraint error.
-func ForeignKeyError(err error, name string) bool {
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) {
-		if pqErr.Code == "23503" && pqErr.Constraint == name {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (m *BlogModel) insert(title, content string, id int) (*Blog, error) {
+func (m *BlogModel) insert(ctx context.Context, title, content string, id int) (*Blog, error) {
 	query := `
 		INSERT INTO blogs (title, content, user_id)
 		VALUES ($1, $2, $3) RETURNING id, created_at, updated_at, version`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	var blog Blog
@@ -45,10 +32,10 @@ func (m *BlogModel) insert(title, content string, id int) (*Blog, error) {
 	blog.Content = content
 	blog.UserID = id
 
-	err := m.db.QueryRowContext(ctx, query, title, content, id).Scan(&blog.ID, &blog.CreatedAt, &blog.UpdatedAt, &blog.Version)
+	err := m.db.QueryRowContext(dbCtx, query, title, content, id).Scan(&blog.ID, &blog.CreatedAt, &blog.UpdatedAt, &blog.Version)
 	if err != nil {
 		switch {
-		case ForeignKeyError(err, "blogs_user_id_fkey"):
+		case common.ForeignKeyError(err, "blogs_user_id_fkey"):
 			return nil, ErrUserForeignKey
 		default:
 			return nil, err
@@ -59,17 +46,17 @@ func (m *BlogModel) insert(title, content string, id int) (*Blog, error) {
 }
 
 // getBlogById is a method to get a blog by its ID joining the users table to get the user's name.
-func (m *BlogModel) getBlogById(id int) (*Blog, error) {
+func (m *BlogModel) getBlogById(ctx context.Context, id int) (*Blog, error) {
 	query := `
 		SELECT b.id, b.title, b.content, b.user_id, b.created_at, b.updated_at, b.version, u.username
 		FROM blogs b
 		JOIN users u ON b.user_id = u.id
 		WHERE b.id = $1`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	row := m.db.QueryRowContext(ctx, query, id)
+	row := m.db.QueryRowContext(dbCtx, query, id)
 
 	var blog Blog
 	err := row.Scan(&blog.ID, &blog.Title, &blog.Content, &blog.User.ID, &blog.CreatedAt, &blog.UpdatedAt, &blog.Version, &blog.User.Username)
@@ -83,10 +70,9 @@ func (m *BlogModel) getBlogById(id int) (*Blog, error) {
 	}
 
 	return &blog, nil
-
 }
 
-func (m *BlogModel) updateBlog(blog *Blog) error {
+func (m *BlogModel) updateBlog(ctx context.Context, blog *Blog) error {
 	query := `
 		UPDATE blogs
 		SET
@@ -96,10 +82,10 @@ func (m *BlogModel) updateBlog(blog *Blog) error {
 		WHERE id = $3 AND version = $4 AND user_id = $5
 		RETURNING version, created_at, updated_at`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := m.db.QueryRowContext(ctx, query, blog.Title, blog.Content, blog.ID, blog.Version, blog.UserID).Scan(&blog.Version, &blog.CreatedAt, &blog.UpdatedAt)
+	err := m.db.QueryRowContext(dbCtx, query, blog.Title, blog.Content, blog.ID, blog.Version, blog.UserID).Scan(&blog.Version, &blog.CreatedAt, &blog.UpdatedAt)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -112,15 +98,15 @@ func (m *BlogModel) updateBlog(blog *Blog) error {
 	return nil
 }
 
-func (m *BlogModel) deleteBlog(blogId, userId int) error {
+func (m *BlogModel) deleteBlog(ctx context.Context, blogId, userId int) error {
 	query := `
 		DELETE FROM blogs
 		WHERE id = $1 AND user_id = $2`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	res, err := m.db.ExecContext(ctx, query, blogId, userId)
+	res, err := m.db.ExecContext(dbCtx, query, blogId, userId)
 	if err != nil {
 		return err
 	}
@@ -142,23 +128,22 @@ func (m *BlogModel) deleteBlog(blogId, userId int) error {
 	return nil
 }
 
-func (m *BlogModel) getBlogsByUserId(userID int) (*[]Blog, error) {
+func (m *BlogModel) getBlogsByUserId(ctx context.Context, userID int) (*[]Blog, error) {
 	query := `
 		SELECT id, title, content, user_id, created_at, updated_at, version
 		FROM blogs
 		WHERE user_id = $1
 		ORDER BY created_at DESC`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := m.db.QueryContext(ctx, query, userID)
+	rows, err := m.db.QueryContext(dbCtx, query, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	// found is a flag to check if any records were found
 	found := false
 
 	var blogs []Blog
@@ -191,7 +176,10 @@ func (m *BlogModel) getBlogs(ctx context.Context, limit, offset int) (*[]Blog, e
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
 
-	rows, err := m.db.QueryContext(ctx, query, limit, offset)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := m.db.QueryContext(dbCtx, query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +211,10 @@ func (m *BlogModel) getBlogsByTitle(ctx context.Context, title string, limit, of
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := m.db.QueryContext(ctx, query, "%"+title+"%", limit, offset)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := m.db.QueryContext(dbCtx, query, "%"+title+"%", limit, offset)
 	if err != nil {
 		return nil, err
 	}

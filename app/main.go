@@ -9,6 +9,7 @@ import (
 	_ "github.com/sushihentaime/blogist/docs"
 	"github.com/sushihentaime/blogist/internal/blogservice"
 	"github.com/sushihentaime/blogist/internal/common"
+	"github.com/sushihentaime/blogist/internal/likeservice"
 	"github.com/sushihentaime/blogist/internal/mailservice"
 	"github.com/sushihentaime/blogist/internal/userservice"
 )
@@ -20,6 +21,7 @@ type application struct {
 	userService *userservice.UserService
 	blogService *blogservice.BlogService
 	mailService *mailservice.MailService
+	likeService *likeservice.LikeService
 	broker      *common.MessageBroker
 }
 
@@ -88,6 +90,7 @@ func main() {
 		blogService: blogservice.NewBlogService(db, cache),
 		broker:      broker,
 		mailService: mailservice.NewMailService(broker, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
+		likeService: likeservice.NewLikeService(db, cache),
 	}
 
 	// Initialize the consumer

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/sushihentaime/blogist/internal/likeservice"
 )
 
 type envelope map[string]any
@@ -151,4 +154,35 @@ func (app *application) extractTokenFromHeader(authHeader string) string {
 	}
 
 	return ""
+}
+
+func (app *application) fetchBlogAndLikesData(ctx context.Context, blogID int) ([]likeservice.LikedUser, int, error) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	var likes []likeservice.LikedUser
+	var likeCount int
+	var errLikes, errLikeCount error
+
+	go func() {
+		defer wg.Done()
+		likes, errLikes = app.likeService.GetUsersWhoLikedPost(ctx, blogID)
+	}()
+
+	go func() {
+		defer wg.Done()
+		likeCount, errLikeCount = app.likeService.GetLikeCount(ctx, blogID)
+	}()
+
+	wg.Wait()
+
+	if errLikes != nil {
+		return nil, 0, fmt.Errorf("failed to retrieve likes: %w", errLikes)
+	}
+
+	if errLikeCount != nil {
+		return nil, 0, fmt.Errorf("failed to retrieve like count: %w", errLikeCount)
+	}
+
+	return likes, likeCount, nil
 }

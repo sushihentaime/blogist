@@ -3,10 +3,11 @@ package common
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 var (
@@ -43,4 +44,15 @@ func connectDB(URI string, maxOpenConns int, maxIdleConns int, maxIdleTime time.
 // CloseDB closes the database connection
 func CloseDB(db *sql.DB) error {
 	return db.Close()
+}
+
+func ForeignKeyError(err error, name string) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		if pqErr.Code == "23503" && pqErr.Constraint == name {
+			return true
+		}
+	}
+
+	return false
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/sushihentaime/blogist/internal/blogservice"
 	"github.com/sushihentaime/blogist/internal/common"
+	"github.com/sushihentaime/blogist/internal/likeservice"
 	"github.com/sushihentaime/blogist/internal/mailservice"
 	"github.com/sushihentaime/blogist/internal/userservice"
 )
@@ -71,6 +72,7 @@ func newTestApplication(t *testing.T) (*application, *sql.DB) {
 		mailService: mailservice.NewMailService(rabbitmq, cfg.MailHost, cfg.MailUser, cfg.MailPassword, cfg.MailSender, cfg.MailPort, logger),
 		broker:      rabbitmq,
 		blogService: blogservice.NewBlogService(db, cache),
+		likeService: likeservice.NewLikeService(db, cache),
 	}
 
 	return app, db

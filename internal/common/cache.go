@@ -50,3 +50,11 @@ func CacheKeyUserByAccessToken(token []byte) string {
 func CacheKeyUserByUsername(username string) string {
 	return "user_by_username:" + username
 }
+
+func CacheKeyLikeCount(blogID int) string {
+	return "like_count:" + strconv.Itoa(blogID)
+}
+
+func CacheKeyLikedUsers(blogID int) string {
+	return "liked_users:" + strconv.Itoa(blogID)
+}

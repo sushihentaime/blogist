@@ -45,14 +45,12 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 		return nil, err
 	}
 
-	// Insert the user into the database
-	err = s.m.insertUser(&u)
+	err = s.m.insertUser(ctx, &u)
 	if err != nil {
 		return nil, err
 	}
 
-	// create the token
-	token, err := s.m.createToken(u.ID, ActivationTokenTime, TokenScopeActivate)
+	token, err := s.m.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +89,7 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	// Hash the token
 	hash := hashToken(token)
 
-	user, err := s.m.getUser(TokenScopeActivate, hash)
+	user, err := s.m.getUser(ctx, TokenScopeActivate, hash)
 	if err != nil {
 		return err
 	}
@@ -102,14 +100,14 @@ func (s *UserService) ActivateUser(ctx context.Context, token string) error {
 	}
 
 	// activate the user account
-	err = s.m.activateUserAccount(tx, user.ID, user.Version)
+	err = s.m.activateUserAccount(ctx, tx, user.ID, user.Version)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
 	}
 
 	// delete the token
-	err = s.m.deleteToken(tx, user.ID, TokenScopeActivate)
+	err = s.m.deleteToken(ctx, tx, user.ID, TokenScopeActivate)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -140,7 +138,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	}
 
 	// Get the user from the database
-	user, err := s.m.getUserByUsername(username)
+	user, err := s.m.getUserByUsername(ctx, username)
 	if err != nil {
 		switch {
 		case errors.Is(err, common.ErrRecordNotFound):
@@ -164,13 +162,13 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 			return nil, err
 		}
 
-		if err := s.m.updateUserPassword(user.Password, user.ID, user.Version); err != nil {
+		if err := s.m.updateUserPassword(ctx, user.Password, user.ID, user.Version); err != nil {
 			return nil, err
 		}
 	}
 
 	// get the token from the database
-	dbToken, err := s.m.getAuthToken(user.ID)
+	dbToken, err := s.m.getAuthToken(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,13 +181,13 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 		}
 
 		// delete the token
-		err = s.m.deleteAuthToken(tx, user.ID)
+		err = s.m.deleteAuthToken(ctx, tx, user.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
 
-		authToken, err := s.m.createAuthToken(tx, user.ID)
+		authToken, err := s.m.createAuthToken(ctx, tx, user.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, err
@@ -206,7 +204,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 			return nil, err
 		}
 
-		authToken, err := s.m.createAuthToken(tx, user.ID)
+		authToken, err := s.m.createAuthToken(ctx, tx, user.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, err
@@ -220,7 +218,7 @@ func (s *UserService) LoginUser(ctx context.Context, username, password string) 
 	}
 }
 
-func (s *UserService) getUserByAccessToken(token string) (*User, error) {
+func (s *UserService) getUserByAccessToken(ctx context.Context, token string) (*User, error) {
 	hash := hashToken(token)
 
 	// get the user from the cache
@@ -229,7 +227,7 @@ func (s *UserService) getUserByAccessToken(token string) (*User, error) {
 	}
 
 	// get the user from the database
-	user, err := s.m.getToken(hash)
+	user, err := s.m.getToken(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +247,7 @@ func (s *UserService) GetUserByAccessToken(ctx context.Context, token string) (*
 		return nil, v.ValidationError()
 	}
 
-	return s.getUserByAccessToken(token)
+	return s.getUserByAccessToken(ctx, token)
 }
 
 func (s *UserService) LogoutUser(ctx context.Context, userId int) error {
@@ -265,7 +263,7 @@ func (s *UserService) LogoutUser(ctx context.Context, userId int) error {
 		return err
 	}
 
-	err = s.m.deleteAuthToken(tx, userId)
+	err = s.m.deleteAuthToken(ctx, tx, userId)
 	if err != nil {
 		_ = tx.Rollback
 		return err

@@ -30,10 +30,15 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/api/v1/blogs", app.getAllBlogsHandler)
 	router.HandlerFunc(http.MethodPost, "/api/v1/blogs/create", app.requirePermission(app.createBlogHandler, userservice.PermissionWriteBlog))
 	router.HandlerFunc(http.MethodGet, "/api/v1/blogs/search", app.searchBlogsHandler)
-	router.HandlerFunc(http.MethodGet, "/api/v1/blogs/user/:userid", app.getBlogsByUserIdHandler)
+
 	router.HandlerFunc(http.MethodGet, "/api/v1/blogs/view/:id", app.getBlogHandler)
 	router.HandlerFunc(http.MethodPut, "/api/v1/blogs/update/:id", app.requirePermission(app.updateBlogHandler, userservice.PermissionWriteBlog))
 	router.HandlerFunc(http.MethodDelete, "/api/v1/blogs/delete/:id", app.requirePermission(app.deleteBlogHandler, userservice.PermissionWriteBlog))
+
+	router.HandlerFunc(http.MethodPost, "/api/v1/blogs/like/:id", app.requireActivatedUser(app.likeBlogHandler))
+	router.HandlerFunc(http.MethodPut, "/api/v1/blogs/unlike/:id", app.requireActivatedUser(app.unlikeBlogHandler))
+
+	router.HandlerFunc(http.MethodGet, "/api/v1/blogs/user/:userid", app.getBlogsByUserIdHandler)
 
 	// Add a metrics handler
 	router.HandlerFunc(http.MethodGet, "/debugs/vars", expvar.Handler().ServeHTTP)

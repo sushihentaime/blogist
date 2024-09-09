@@ -7,6 +7,7 @@ import (
 
 	"github.com/sushihentaime/blogist/internal/blogservice"
 	"github.com/sushihentaime/blogist/internal/common"
+	"github.com/sushihentaime/blogist/internal/likeservice"
 	"github.com/sushihentaime/blogist/internal/userservice"
 )
 
@@ -166,6 +167,8 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 // @Description Log out a user by invalidating their access token
 // @Tags Users
 // @Security Bearer
+// @Accept json
+// @Produce json
 // @Success 200 {object} MessageResponse "User logged out"
 // @Router /users/logout [delete]
 func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +240,9 @@ func (app *application) createBlogHandler(w http.ResponseWriter, r *http.Request
 }
 
 type BlogResponse struct {
-	Blog blogservice.Blog `json:"blog"`
+	Blog      blogservice.Blog        `json:"blog"`
+	LikedBy   []likeservice.LikedUser `json:"liked_by"`
+	LikeCount int                     `json:"like_count"`
 }
 
 // @Summary Get a blog by ID
@@ -268,7 +273,19 @@ func (app *application) getBlogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"blog": blog}, nil)
+	users, likeCount, err := app.fetchBlogAndLikesData(r.Context(), blog.ID)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	response := envelope{
+		"blog":       blog,
+		"liked_by":   users,
+		"like_count": likeCount,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, response, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -496,6 +513,80 @@ func (app *application) getBlogsByUserIdHandler(w http.ResponseWriter, r *http.R
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"blogs": blogs}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+// @Summary Like a blog post
+// @Description Like a blog post by its ID, authenticated by a logged-in user
+// @Tags Blogs
+// @Security Bearer
+// @Param id path int true "Blog ID"
+// @Produce json
+// @Success 201 {object} MessageResponse "Blog liked"
+// @Router /blogs/like/{id} [post]
+func (app *application) likeBlogHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.getUserContext(r)
+
+	id, err := app.readIDParam(r, "id")
+	if err != nil {
+		app.badRequestErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.likeService.CreateLike(r.Context(), id, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, likeservice.ErrInvalidBlogID) || errors.Is(err, likeservice.ErrInvalidUserID):
+			app.notFoundErrorResponse(w, r)
+		case errors.Is(err, likeservice.ErrAlreadyLiked):
+			app.writeJSON(w, http.StatusOK, envelope{"message": "blog already liked"}, nil)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"message": "Blog liked successfully"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+// @Summary Unlike a blog post
+// @Description Unlike a blog post by its ID, authenticated by a logged-in user
+// @Tags Blogs
+// @Security Bearer
+// @Param id path int true "Blog ID"
+// @Produce json
+// @Success 200 {object} MessageResponse "Blog unliked successfully"
+// @Router /blogs/unlike/{id} [put]
+func (app *application) unlikeBlogHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.getUserContext(r)
+
+	id, err := app.readIDParam(r, "id")
+	if err != nil {
+		app.badRequestErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.likeService.DeleteLike(r.Context(), id, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, likeservice.ErrInvalidBlogID) || errors.Is(err, likeservice.ErrInvalidUserID):
+			app.notFoundErrorResponse(w, r)
+		case errors.Is(err, likeservice.ErrLikeNotFound):
+			app.notFoundErrorResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "Blog unliked successfully"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

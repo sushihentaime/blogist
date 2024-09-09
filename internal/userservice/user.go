@@ -18,7 +18,7 @@ func newUserModel(db *sql.DB) *DBModel {
 	return &DBModel{db: db}
 }
 
-func (m *DBModel) insertUser(u *User) error {
+func (m *DBModel) insertUser(ctx context.Context, u *User) error {
 	query := `
 		INSERT INTO users (username, email, password)
 		VALUES ($1, $2, $3)
@@ -31,10 +31,10 @@ func (m *DBModel) insertUser(u *User) error {
 	}
 
 	// Create a new context for external calls
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := m.db.QueryRowContext(ctx, query, args...).Scan(&u.ID)
+	err := m.db.QueryRowContext(dbCtx, query, args...).Scan(&u.ID)
 	if err != nil {
 		switch {
 		case err.Error() == "pq: duplicate key value violates unique constraint \"users_username_key\"":
@@ -48,7 +48,7 @@ func (m *DBModel) insertUser(u *User) error {
 	return nil
 }
 
-func (m *DBModel) getUserByUsername(username string) (*User, error) {
+func (m *DBModel) getUserByUsername(ctx context.Context, username string) (*User, error) {
 	query := `
 		SELECT id, username, email, password, version
 		FROM users
@@ -56,10 +56,10 @@ func (m *DBModel) getUserByUsername(username string) (*User, error) {
 
 	var u User
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := m.db.QueryRowContext(ctx, query, username).Scan(&u.ID, &u.Username, &u.Email, &u.Password.hash, &u.Version)
+	err := m.db.QueryRowContext(dbCtx, query, username).Scan(&u.ID, &u.Username, &u.Email, &u.Password.hash, &u.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -72,16 +72,16 @@ func (m *DBModel) getUserByUsername(username string) (*User, error) {
 	return &u, nil
 }
 
-func (m *DBModel) activateUserAccount(tx *sql.Tx, id int, version int) error {
+func (m *DBModel) activateUserAccount(ctx context.Context, tx *sql.Tx, id int, version int) error {
 	query := `
 		UPDATE users
 		SET activated = true
 		WHERE id = $1 AND version = $2`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	res, err := tx.ExecContext(ctx, query, id, version)
+	res, err := tx.ExecContext(dbCtx, query, id, version)
 	if err != nil {
 		return err
 	}
@@ -102,16 +102,16 @@ func (m *DBModel) activateUserAccount(tx *sql.Tx, id int, version int) error {
 	return nil
 }
 
-func (m *DBModel) updateUserPassword(pwd Password, id int, version int) error {
+func (m *DBModel) updateUserPassword(ctx context.Context, pwd Password, id int, version int) error {
 	query := `
 		UPDATE users
 		SET password = $1
 		WHERE id = $2 AND version = $3`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := m.db.ExecContext(ctx, query, pwd.hash, id, version)
+	_, err := m.db.ExecContext(dbCtx, query, pwd.hash, id, version)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (m *DBModel) updateUserPassword(pwd Password, id int, version int) error {
 	return nil
 }
 
-func (m *DBModel) getToken(token []byte) (*User, error) {
+func (m *DBModel) getToken(ctx context.Context, token []byte) (*User, error) {
 	var u User
 
 	query := `
@@ -129,10 +129,10 @@ func (m *DBModel) getToken(token []byte) (*User, error) {
 		INNER JOIN user_permissions p on u.id = p.user_id
 		WHERE t.access_token = $1 AND t.access_token_expiry > $2`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := m.db.QueryContext(ctx, query, token, time.Now())
+	rows, err := m.db.QueryContext(dbCtx, query, token, time.Now())
 	if err != nil {
 		return nil, err
 	}

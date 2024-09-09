@@ -157,12 +157,12 @@ func TestActivateUser(t *testing.T) {
 			return nil, err
 		}
 
-		err = s.m.insertUser(&u)
+		err = s.m.insertUser(ctx, &u)
 		if err != nil {
 			return nil, err
 		}
 
-		token, err := s.m.createToken(u.ID, ActivationTokenTime, TokenScopeActivate)
+		token, err := s.m.createToken(ctx, u.ID, ActivationTokenTime, TokenScopeActivate)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func TestLoginUser(t *testing.T) {
 			return err
 		}
 
-		err = s.m.insertUser(&u)
+		err = s.m.insertUser(ctx, &u)
 		if err != nil {
 			return err
 		}
@@ -352,7 +352,7 @@ func TestGetUserByAccessToken(t *testing.T) {
 			return nil, err
 		}
 
-		err = s.m.insertUser(&u)
+		err = s.m.insertUser(ctx, &u)
 		if err != nil {
 			return nil, err
 		}
@@ -362,7 +362,7 @@ func TestGetUserByAccessToken(t *testing.T) {
 			return nil, err
 		}
 
-		token, err := s.m.createAuthToken(tx, u.ID)
+		token, err := s.m.createAuthToken(ctx, tx, u.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, err
@@ -442,7 +442,7 @@ func TestLogoutUser(t *testing.T) {
 			return err
 		}
 
-		err = s.m.insertUser(&u)
+		err = s.m.insertUser(ctx, &u)
 		if err != nil {
 			return err
 		}
@@ -452,7 +452,7 @@ func TestLogoutUser(t *testing.T) {
 			return err
 		}
 
-		_, err = s.m.createAuthToken(tx, u.ID)
+		_, err = s.m.createAuthToken(ctx, tx, u.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return err

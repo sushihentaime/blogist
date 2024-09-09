@@ -89,7 +89,7 @@ func (app *application) requireAuthUser(next http.HandlerFunc) http.HandlerFunc 
 	})
 }
 
-func (app *application) requireActivatedUser(next http.Handler) http.HandlerFunc {
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.getUserContext(r)
 		if !user.IsActivated() {
@@ -151,6 +151,7 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 	})
 }
 
+// change the storage of the rate limiter from a map into a cache
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	type client struct {
 		limiter  *rate.Limiter

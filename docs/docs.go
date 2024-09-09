@@ -116,6 +116,40 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/blogs/like/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Like a blog post by its ID, authenticated by a logged-in user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Blogs"
+                ],
+                "summary": "Like a blog post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Blog ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Blog liked",
+                        "schema": {
+                            "$ref": "#/definitions/main.MessageResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/blogs/search": {
             "get": {
                 "description": "Retrieve a paginated list of blog posts that match the given title query.",
@@ -152,6 +186,40 @@ const docTemplate = `{
                         "description": "List of blog posts",
                         "schema": {
                             "$ref": "#/definitions/main.AllBlogsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/blogs/unlike/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Unlike a blog post by its ID, authenticated by a logged-in user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Blogs"
+                ],
+                "summary": "Unlike a blog post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Blog ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Blog unliked successfully",
+                        "schema": {
+                            "$ref": "#/definitions/main.MessageResponse"
                         }
                     }
                 }
@@ -337,6 +405,12 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Log out a user by invalidating their access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "Users"
                 ],
@@ -417,6 +491,17 @@ const docTemplate = `{
                 }
             }
         },
+        "likeservice.LikedUser": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "main.AllBlogsResponse": {
             "type": "object",
             "properties": {
@@ -458,6 +543,15 @@ const docTemplate = `{
             "properties": {
                 "blog": {
                     "$ref": "#/definitions/blogservice.Blog"
+                },
+                "like_count": {
+                    "type": "integer"
+                },
+                "liked_by": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/likeservice.LikedUser"
+                    }
                 }
             }
         },
