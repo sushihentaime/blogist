@@ -271,10 +271,14 @@ func TestUpdateBlog(t *testing.T) {
 			assert.Equal(t, tc.expectedErr, err)
 
 			var b Blog
-			err = db.QueryRow("SELECT title, content FROM blogs WHERE id = $1", tc.blog.ID).Scan(&b.Title, &b.Content)
+			// get the updated blog from the database with the title, content, userid, version, created_at and updated_at
+			err = db.QueryRow("SELECT title, content, user_id, version, created_at, updated_at FROM blogs WHERE id = $1", tc.blog.ID).Scan(&b.Title, &b.Content, &b.UserID, &b.Version, &b.CreatedAt, &b.UpdatedAt)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedResult.Title, b.Title)
 			assert.Equal(t, tc.expectedResult.Content, b.Content)
+			assert.Equal(t, 2, b.Version)
+			assert.NotNil(t, b.CreatedAt)
+			assert.True(t, b.UpdatedAt.After(b.CreatedAt))
 
 			t.Cleanup(func() {
 				err := cleanup()
